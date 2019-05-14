@@ -2,155 +2,160 @@ import pandas as pd
 import numpy as np
 import torch
 
+import pickle
 
 class Dataset(object):
-    def __init__(self, path, sep='\t', session_key='SessionID', item_key='ItemId', time_key='timestamp', n_sample=-1, itemmap=None, itemstamp=None, time_sort=False):
-        # Read csv
-        self.df = pd.read_csv(path, sep=sep, names=[session_key, item_key, time_key])
-        self.session_key = session_key
-        self.item_key = item_key
-        self.time_key = time_key
-        self.time_sort = time_sort
-        if n_sample > 0:
-            self.df = self.df[:n_sample]
+    def __init__(self, itemFile, sep='\t', session_key='SessionID', item_key='ItemId', time_key='timestamp', n_sample=-1, itemmap=None, itemstamp=None, time_sort=False):
 
-        # Add colummn item index to data
-        self.add_item_indices(itemmap=itemmap)
+        data_file = open(itemFile, "rb")
 
-        """
-        Sort the df by time, and then by session ID. That is, df is sorted by session ID and
-        clicks within a session are next to each other, where the clicks within a session are time-ordered.
-        Example:
-        >>> df = pd.DataFrame({
-        ...     'col1' : ['A', 'A', 'B', np.nan, 'D', 'C'],
-        ...     'col2' : [2, 1, 9, 8, 7, 4],
-        ...     'col3': [0, 1, 9, 4, 2, 3],
-        ... })
-        >>> df
-            col1 col2 col3
-        0   A    2    0
-        1   A    1    1
-        2   B    9    9
-        3   NaN  8    4
-        4   D    7    2
-        5   C    4    3
-        
-        >>> df.sort_values(by=['col1', 'col2'])
-            col1 col2 col3
-        1   A    1    1
-        0   A    2    0
-        2   B    9    9
-        5   C    4    3
-        4   D    7    2
-        3   NaN  8    4
-        """
-        self.df.sort_values([session_key, time_key], inplace=True)
-        self.click_offsets = self.get_click_offset()
-        self.session_idx_arr = self.order_session_idx()
-        # print(self.df)
+        data_sess_arr = pickle.load(data_file)
 
-    def add_item_indices(self, itemmap=None):
-        """
-        Add item index column named "item_idx" to the df
-        Args:
-            itemmap (pd.DataFrame): mapping between the item Ids and indices
-        """
+        item_sess_arr = data_sess_arr[1]
 
-        if itemmap is None:
-            item_ids = self.df[self.item_key].unique()  # type is numpy.ndarray
-            item2idx = pd.Series(data=np.arange(len(item_ids)),
-                                 index=item_ids)
-            # Build itemmap is a DataFrame that have 2 columns (self.item_key, 'item_idx)
-            itemmap = pd.DataFrame({self.item_key: item_ids,
-                                   'item_idx': item2idx[item_ids].values})
+        sess_num = len(item_sess_arr)
+        print("session num", sess_num)
+
+        sess_len_list = []
+
         self.itemmap = itemmap
-        # print(self.df)
-        self.df = pd.merge(self.df, self.itemmap, on=self.item_key, how='inner')
-        # print(self.df)
 
-    def get_click_offset(self):
-        """
-        self.df[self.session_key] return a set of session_key
-        self.df[self.session_key].nunique() return the size of session_key set (int)
-        self.df.groupby(self.session_key).size() return the size of each session_id
-        self.df.groupby(self.session_key).size().cumsum() retunn cumulative sum
-        """
-        offsets = np.zeros(self.df[self.session_key].nunique() + 1, dtype=np.int32)
-        offsets[1:] = self.df.groupby(self.session_key).size().cumsum()
+        item_id_sess_arr = []
+
+        for sess_index in range(sess_num):
+            item_sess_unit_list = item_sess_arr[sess_index]
+
+            sess_len = len(item_sess_unit_list)
+
+            sess_len_list.append(sess_len)
+
+            for action_index in range(sess_len):
+                item = item_sess_unit_list[action_index]
+                if itemmap is None:
+                    self.addItem(item, itemmap)
+
+                item_id = self.itemmap[item]
+
+                # if itemmap is not None:
+                #     print(item_id, item)
+                item_id_sess_arr.append(item_id)
+
+        print("item sess arr", item_sess_arr[:10])
+        print("item id sess arr", item_id_sess_arr[:100])
+        self.click_offsets = self.getClickOffset(sess_num, sess_len_list)
+        self.item_arr = np.array(item_id_sess_arr)
+        self.sess_num = sess_num
+        # print(self.itemmap)
+        # self.df = pd.read_csv(path, sep=sep, names=[session_key, item_key, time_key])
+        # self.session_key = session_key
+        # self.item_key = item_key
+        # self.time_key = time_key
+        # self.time_sort = time_sort
+
+        # if n_sample > 0:
+        #   self.df = self.df[:n_sample]
+
+        # self.add_item_indices(itemmap=itemmap)
+
+        # self.df.sort_values([session_key, time_key], inplace=True)
+        # self.click_offsets = self.get_click_offset()
+        # self.session_idx_arr = self.order_session_idx()
+
+    def addItem(self, item, itemmap=None):
+        if itemmap is None:
+            if self.itemmap is None:
+                self.itemmap = {}
+
+            if item not in self.itemmap:
+                item_id = len(self.itemmap)
+                self.itemmap[item] = item_id
+
+    def getClickOffset(self, sess_num, sess_len_list):
+
+        if sess_num != len(sess_len_list):
+            print("error sess num")
+        offsets = np.zeros(sess_num+1, dtype=np.int32)
+        offsets[1:] = np.array(sess_len_list).cumsum()
+
         return offsets
 
-    def order_session_idx(self):
-        if self.time_sort:
-            sessions_start_time = self.df.groupby(self.session_key)[self.time_key].min().values
-            session_idx_arr = np.argsort(sessions_start_time)
-        else:
-            session_idx_arr = np.arange(self.df[self.session_key].nunique())
-        return session_idx_arr
+    # def add_item_indices(self, itemmap=None):
+    #   if itemmap is None:
+    #       item_ids = self.df[self.item_key].unique()
+    #       item2idx = pd.Series(data=np.arange(len(item_ids)), index=item_ids)
 
+    #       itemmap = pd.DataFrame({self.item_key: item_ids, 'item_idx':item2idx[item_ids].values})
+
+    #   self.itemmap = itemmap
+
+    #   self.df = pd.merge(self.df, self.itemmap, on=self.item_key, how='inner')
+
+    # def get_click_offset(self):
+    #   offsets = np.zeros(self.df[self.session_key].nunique()+1, dtype=np.int32)
+    #   offsets[1:] = self.df.groupby(self.session_key).size().cumsum()
+
+    #   return offsets
+
+    # def order_session_idx(self):
+    #   if self.time_sort:
+    #       sessions_start_time = self.df.groupby(self.session_key)[self.time_key].min().values
+    #       session_idx_arr = np.argsort(sessions_start_time)
+    #   else:
+    #       session_idx_arr = np.arange(self.df[self.session_key].nunique())
+
+    #   return session_idx_arr
     @property
     def items(self):
-        return self.itemmap.ItemId.unique()
-
+        print("first item", self.itemmap[0])
+        return self.itemmap
+        # return len(self.itemmap)
+        # return self.itemmap.ItemId.unique()
 
 class DataLoader():
     def __init__(self, dataset, batch_size=50):
-        """
-        A class for creating session-parallel mini-batches.
-        Args:
-             dataset (SessionDataset): the session dataset to generate the batches from
-             batch_size (int): size of the batch
-        """
         self.dataset = dataset
         self.batch_size = batch_size
+        # print("self.batch_size", self.batch_size)
 
     def __iter__(self):
-        """ Returns the iterator for producing session-parallel training mini-batches.
-        Yields:
-            input (B,): torch.FloatTensor. Item indices that will be encoded as one-hot vectors later.
-            target (B,): a Variable that stores the target item indices
-            masks: Numpy array indicating the positions of the sessions to be terminated
-        """
-
-        # initializations
-        df = self.dataset.df
         click_offsets = self.dataset.click_offsets
-        session_idx_arr = self.dataset.session_idx_arr
+        item_arr = self.dataset.item_arr
+
+        sess_num = self.dataset.sess_num
 
         iters = np.arange(self.batch_size)
         maxiter = iters.max()
-        start = click_offsets[session_idx_arr[iters]]
-        end = click_offsets[session_idx_arr[iters] + 1]
-        mask = []  # indicator for the sessions to be terminated
+        start = click_offsets[iters]
+        end = click_offsets[iters+1]
+
+        mask_sess_arr = []
         finished = False
 
         while not finished:
-            minlen = (end - start).min()
-            # Item indices(for embedding) for clicks where the first sessions start
-            idx_target = df.item_idx.values[start]
+            minlen = (end-start).min()
 
-            for i in range(minlen - 1):
-                # Build inputs & targets
-                idx_input = idx_target
-                idx_target = df.item_idx.values[start + i + 1]
-                input = torch.LongTensor(idx_input)
-                target = torch.LongTensor(idx_target)
-                yield input, target, mask
+            for i in range(minlen-1):
+                idx_input = item_arr[start+i]
+                idx_target = item_arr[start+i+1]
+                # print(idx_input)
+                # print(idx_target)
+                input_tensor = torch.LongTensor(idx_input)
+                target_tensor = torch.LongTensor(idx_target)
 
-            # click indices where a particular session meets second-to-last element
-            start = start + (minlen - 1)
-            # see if how many sessions should terminate
-            mask = np.arange(len(iters))[(end - start) <= 1]
-            for idx in mask:
-                maxiter += 1
-                if maxiter >= len(click_offsets) - 1:
+                yield input_tensor, target_tensor, mask_sess_arr
+
+
+            start = start + minlen - 1
+            maxiter = maxiter + 1
+
+            mask_sess_arr = np.arange(self.batch_size)[(end-start) <= 1]
+            for mask_sess in mask_sess_arr:
+                maxiter = maxiter+1
+                if maxiter >= sess_num:
                     finished = True
                     break
-                # update the next starting/ending point
-                iters[idx] = maxiter
-                start[idx] = click_offsets[session_idx_arr[maxiter]]
-                end[idx] = click_offsets[session_idx_arr[maxiter] + 1]
 
-                
-if __name__ == '__main__':
-    path = '/home/hungthanhpham94/dev/NLP/GRU4REC-pytorch/data/preprocessed_data/rsc15_train_valid.txt'
-    S = Dataset(path)
+                start[mask_sess] = click_offsets[maxiter]
+                end[mask_sess] = click_offsets[maxiter+1]
+
+                iters[mask_sess] = maxiter

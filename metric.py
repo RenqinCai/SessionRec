@@ -1,39 +1,66 @@
 import torch
 
+
 def get_recall(indices, targets):
+    """
+    Calculates the recall score for the given predictions and targets
 
-	targets = targets.view(-1, 1).expand_as(indices)
-	hits = (targets == indices).nonzero()
+    Args:
+        indices (Bxk): torch.LongTensor. top-k indices predicted by the model.
+        targets (B): torch.LongTensor. actual target indices.
 
-	if len(hits) == 0:
-		# print(hits)
-		return 0
+    Returns:
+        recall (float): the recall score
+    """
 
-	n_hits = (targets==indices).nonzero()[:, :-1].size(0)
-	recall = float(n_hits)/targets.size(0)
-	return recall
+    targets = targets.view(-1, 1).expand_as(indices)
+    hits = (targets == indices).nonzero()
+    if len(hits) == 0:
+        return 0
+    n_hits = (targets == indices).nonzero()[:, :-1].size(0)
+    recall = float(n_hits) / targets.size(0)
+    return recall
+
 
 def get_mrr(indices, targets):
+    """
+    Calculates the MRR score for the given predictions and targets
+    Args:
+        indices (Bxk): torch.LongTensor. top-k indices predicted by the model.
+        targets (B): torch.LongTensor. actual target indices.
 
-	tmp = targets.view(-1, 1)
-	targets = tmp.expand_as(indices)
-	hits = (targets==indices).nonzero()
-	# print("hits")
-	ranks = hits[:, -1] + 1
-	ranks = ranks.float()
+    Returns:
+        mrr (float): the mrr score
+    """
 
-	# print(ranks)
+    tmp = targets.view(-1, 1)
+    targets = tmp.expand_as(indices)
+    hits = (targets == indices).nonzero()
+    ranks = hits[:, -1] + 1
+    ranks = ranks.float()
+    rranks = torch.reciprocal(ranks)
+    mrr = torch.sum(rranks).data / targets.size(0)
+    return mrr
 
-	rranks = torch.reciprocal(ranks)
-	# print("rranks", rranks)
-	mrr = torch.sum(rranks).data/targets.size(0)
-	# print("mrr", mrr)
-	return mrr
 
 def evaluate(indices, targets, k=20):
-	_, indices = torch.topk(indices, k, -1)
-	# print(indices.size())
-	recall = get_recall(indices, targets)
-	mrr = get_mrr(indices, targets)
+    """
+    Evaluates the model using Recall@K, MRR@K scores.
 
-	return recall, mrr
+    Args:
+        logits (B,C): torch.LongTensor. The predicted logit for the next items.
+        targets (B): torch.LongTensor. actual target indices.
+
+    Returns:
+        recall (float): the recall score
+        mrr (float): the mrr score
+    """
+
+    _, indices = torch.topk(indices, k, -1)
+
+    # print("topK", _)
+    # print("predict top k", indices)
+    # print("true target", targets)
+    recall = get_recall(indices, targets)
+    mrr = get_mrr(indices, targets)
+    return recall, mrr
