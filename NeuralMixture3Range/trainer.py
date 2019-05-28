@@ -18,7 +18,11 @@ class Trainer(object):
         self.evaluation = Evaluation(self.model, self.loss_func, use_cuda, self.topk)
         self.device = torch.device('cuda' if use_cuda else 'cpu')
         self.args = args
-
+        
+        self.m_onehot_flag = False
+        if self.args.embedding_dim == -1:
+            self.m_onehot_flag = True
+    
     def train(self, start_epoch, end_epoch, batch_size, start_time=None):
         if start_time is None:
             self.start_time = time.time()
@@ -36,9 +40,9 @@ class Trainer(object):
             st = time.time()
             loss, recall, mrr = self.evaluation.eval(self.eval_data, batch_size)
 
-            print("valid epoch: {}, loss: {:.4f}, recall: {:.2f}, mrr: {:.2f}, time: {}".format(epoch, loss, recall, mrr, time.time() - st))
+            print("valid epoch: {}, loss: {:.4f}, recall: {:.4f}, mrr: {:.4f}, time: {}".format(epoch, loss, recall, mrr, time.time() - st))
             checkpoint = {
-                'model': self.model,
+                'model': self.model.state_dict(),
                 'args': self.args,
                 'epoch': epoch,
                 'optim': self.optim,
@@ -60,9 +64,10 @@ class Trainer(object):
             if len(mask) != 0:
                 hidden[:, mask, :] = 0
             return hidden
-       
-        dataloader = DataLoader(self.train_data, batch_size)
-        for input, target, mask in dataloader:
+    #    BPTT, use_cuda, batch_size=50, onehot_flag=False
+        # dataloader = DataLoader(self.train_data, BPTT, batch_size, self.m_onehot_flag)
+        dataloader = self.train_data
+        for input_idx, input, target, mask in dataloader:
             input = input.to(self.device)
             target = target.to(self.device)
             self.optim.zero_grad()

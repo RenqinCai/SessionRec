@@ -34,6 +34,7 @@ parser.add_argument("--embedding_dim", type=int, default=-1,
 parser.add_argument('--loss_type', default='TOP1', type=str)
 # parser.add_argument('--loss_type', default='BPR', type=str)
 parser.add_argument('--topk', default=5, type=int)
+parser.add_argument('--window_size', default=1, type=int)
 
 parser.add_argument('--n_epochs', default=20, type=int)
 parser.add_argument('--time_sort', default=False, type=bool)
@@ -92,26 +93,22 @@ def init_model(model):
 					p.data.uniform_(0, sigma)
 
 def main():
-	print("loading train data from {}".format(os.path.join(args.data_folder, args.train_data)))
-	print("loading valid data from {}".format(os.path.join(args.data_folder, args.valid_data)))
-	print("loading test data from {}".format(os.path.join(args.data_folder, args.test_data)))
+	
+	train_data = "../Data/movielen/1m/train.pickle"
+	valid_data = "../Data/movielen/1m/test.pickle"
+	test_data = "../Data/movielen/1m/test.pickle"
 
-	train_data = "../Data/tmall/cate_full_train.pickle"
-	valid_data = "../Data/tmall/cate_full_test.pickle"
-	test_data = "../Data/tmall/cate_full_test.pickle"
+	args.train_data = train_data
+	args.valid_data = valid_data
+	args.test_data = test_data
 
 	train_data = dataset.Dataset(train_data)
 	valid_data = dataset.Dataset(valid_data, itemmap=train_data.itemmap)
 	test_data = dataset.Dataset(test_data)
-
-	if not args.is_eval:
-		make_checkpoint_dir()
-
 	input_size = len(train_data.items)
 
-	print("input_size", input_size)
-
 	hidden_size = args.hidden_size
+	# hidden_size = input_size
 	num_layers = args.num_layers
 	output_size = input_size
 
@@ -128,9 +125,24 @@ def main():
 	weight_decay = args.weight_decay
 	momentum = args.momentum
 	eps = args.eps
+	BPTT = args.window_size
 
 	n_epochs = args.n_epochs
 	time_sort = args.time_sort
+
+	print("loading train data from {}".format(args.train_data))
+	print("loading valid data from {}".format(args.valid_data))
+	print("loading test data from {}".format(args.test_data))
+	
+	train_data_loader = dataset.DataLoader(train_data, BPTT, batch_size, embedding_dim)
+	BPTT_valid = 5
+	valid_data_loader = dataset.DataLoader(valid_data, BPTT_valid, batch_size, embedding_dim)
+
+	if not args.is_eval:
+		make_checkpoint_dir()
+
+
+	print("input_size", input_size)
 
 	if not args.is_eval:
 		model = M3R(input_size, hidden_size, output_size, final_act=final_act, num_layers=num_layers, use_cuda=args.cuda, batch_size=batch_size, dropout_input=dropout_input, dropout_hidden=dropout_hidden, embedding_dim=embedding_dim)
@@ -141,7 +153,7 @@ def main():
 
 		loss_function = LossFunction(loss_type=loss_type, use_cuda=args.cuda)
 
-		trainer = Trainer(model, train_data=train_data, eval_data = valid_data, optim=optimizer, use_cuda=args.cuda, loss_func=loss_function, topk=args.topk, args=args)
+		trainer = Trainer(model, train_data=train_data_loader, eval_data =valid_data_loader, optim=optimizer, use_cuda=args.cuda, loss_func=loss_function, topk=args.topk, args=args)
 
 		trainer.train(0, n_epochs-1, batch_size)
 	

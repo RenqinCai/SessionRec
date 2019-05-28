@@ -18,11 +18,7 @@ class Evaluation(object):
 		recalls = []
 		mrrs = []
 
-		# losses = None
-		# recalls = None
-		# mrrs = None
-
-		dataloader = dataset.DataLoader(eval_data, batch_size)
+		dataloader = eval_data
 
 		eval_iter = 0
 
@@ -34,8 +30,8 @@ class Evaluation(object):
 
 		with torch.no_grad():
 			hidden = self.model.init_hidden()
-
-			for input, target, mask in dataloader:
+			total_test_num = []
+			for input_idx, input, target, mask in dataloader:
 				input = input.to(self.device)
 				target = target.to(self.device)
 
@@ -51,26 +47,13 @@ class Evaluation(object):
 
 				recall, mrr = evaluate(logit, target, k=self.topk)
 
-				# if losses is None:
-				# 	losses = loss
-				# else:
-				# 	losses += loss
-
-				# if recalls is None:
-				# 	recalls = recall
-				# else:
-				# 	recalls += recall
-
-				# if mrrs is None:
-				# 	mrrs = mrr
-				# else:
-				# 	mrrs += mrr
-
 				eval_iter += 1
 
 				losses.append(loss.item())
 				recalls.append(recall)
 				mrrs.append(mrr.item())
+
+				total_test_num.append(target.view(-1).size(0))
 
 		# print("mrrs", mrrs)
 
@@ -78,6 +61,7 @@ class Evaluation(object):
 		mean_recall = np.mean(recalls)
 		mean_mrr = np.mean(mrrs)
 
+		print("total test num", np.sum(total_test_num))
 		# mean_losses = losses/eval_iter
 		# mean_recall = recalls/eval_iter
 		# mean_mrr = mrrs/eval_iter
