@@ -52,46 +52,35 @@ class HierGRU4REC(nn.Module):
         
         # embedded = embedded.transpose(0, 1)
         embedded = embedded.unsqueeze(0)
-        # print("embedded size", embedded.size())
-        # embedded_pad = torch.nn.utils.rnn.pack_padded_sequeence(embedded, input_len)
 
         ### update user gru
         next_user_hidden = user_hidden
         next_sess_hidden = sess_hidden
 
         if len(mask_sess) != 0:
-            print("mask sess 1")
+            # print("mask sess 1")
             sess_hidden_user = sess_hidden[:, mask_sess, :]
             user_hidden_user = user_hidden[:, mask_sess, :]
             user_output, last_user_hidden = self.m_user_gru(sess_hidden_user, user_hidden_user)
-            # print("user_output size", user_output.size())
-            # print("last_user_hidden size", last_user_hidden.size())
 
             next_user_hidden[:, mask_sess, :] = last_user_hidden
-            
+        
+        torch.autograd.set_detect_anomaly(True)
+
         if len(mask_user) != 0:
-            print("mask user 1")
+            # print("mask user 1")
             next_user_hidden[:, mask_user, :] = 0
 
         if len(mask_sess) != 0:
-            print("mask sess 2")
+            # print("mask sess 2")
             next_sess_hidden[:, mask_sess, :] = next_user_hidden[:, mask_sess, :]
 
-        ### use user_hidden as input sess_gru, update session gru
-        sess_output, sess_hidden = self.m_sess_gru(embedded, next_sess_hidden)
-        # print("sess output size", sess_output.size())
-        # print("last sess hidden size", last_sess_hidden.size())
+        sess_output, sess_hidden = self.m_sess_gru(embedded, sess_hidden)
 
-        # print("user_hidden", user_hidden.size())
-        # sess_hidden = last_sess_hidden
-        # sess_hidden = sess_hidden.view(-1, sess_hidden.size(-1))
-        # logit = sess_hidden.view(-1, sess_hidden.size(-1))
-
-        pred_sess_hidden = sess_hidden.contiguous().view(-1, sess_hidden.size(-1))
-        logit = self.m_final_act(self.m_h2o(pred_sess_hidden))
-        # print("logit size", logit.size())
-        logit = logit.view(-1, logit.size(-1))
-        return logit, sess_hidden, user_hidden
+        sess_output = sess_output.view(-1, sess_output.size(-1))
+        logit = self.m_final_act(self.m_h2o(sess_output))
+     
+        return logit, sess_hidden, next_sess_hidden
 
     def init_hidden(self):
         

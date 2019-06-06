@@ -70,7 +70,7 @@ class Trainer(object):
         sess_hidden = self.model.init_hidden()
         user_hidden = self.model.init_hidden()
 
-        for idx_input, idx_target, mask_sess, mask_user in dataloader:
+        for idx_input, idx_target, mask_sess_start, mask_user_start, start_user_mask in dataloader:
             idx_input = idx_input.to(self.device)
             idx_target = idx_target.to(self.device)
             self.optim.zero_grad()
@@ -78,15 +78,15 @@ class Trainer(object):
             # hidden = reset_hidden(hidden, mask).detach()
             # sess_hidden, user_hidden = reset_hidden(sess_hidden, user_hidden, mask_sess, mask_user)
             # print("input size", input.size())
-            logit, sess_hidden, user_hidden = self.model(idx_input, sess_hidden, user_hidden, mask_sess, mask_user)
-            # output sampling
-            print("logit size", logit.size())
-            print("idx_target size", idx_target.size())
-            logit_sampled = logit[:, idx_target.view(-1)]
-            print("logit sample size", logit_sampled.size())
-            loss = self.loss_func(logit_sampled)
+            
+            logit, sess_hidden, user_hidden = self.model(idx_input, sess_hidden, user_hidden, mask_sess_start, mask_user_start)
 
-            print("loss", loss)
+            sess_hidden = sess_hidden.detach()
+            user_hidden = user_hidden.detach()
+            # output sampling
+        
+            logit_sampled = logit[:, idx_target.view(-1)]
+            loss = self.loss_func(logit_sampled)
             losses.append(loss.item())
             loss.backward()
             self.optim.step()

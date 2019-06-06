@@ -26,6 +26,8 @@ class Dataset(object):
 
 		user_num = len(total_action_pickle)
 		print("user num", user_num)
+		
+		total_action_num = 0
 
 		### preprocess user action pickle into user sess action arr
 		session_thresh = 30*60 ## 30 minutes
@@ -39,15 +41,18 @@ class Dataset(object):
 		itemmap = {}
 
 		for user_index in range(user_num):
+			# print("user index", user_index)
 			if user_index %5000 == 0:
 				print("user index", user_index)
 			user_action_list = total_action_pickle[user_index]
 			user_time_list = total_time_pickle[user_index]
 			
 			user_action_num = len(user_action_list)
-
-			# print("user_action_num", user_action_num, user_action_list)
+			total_action_num += user_action_num
+			# print("user_action_num", user_action_num)
 			
+			user_padding_action_num = 0
+
 			user_sess_action_list = []
 
 			sess_start_index = 0
@@ -58,7 +63,7 @@ class Dataset(object):
 				itemmap[item] = item_id
 
 			user_action_list = user_action_list.tolist()
-			action_arr += user_action_list
+			# action_arr += user_action_list
 
 			for action_index in range(1, user_action_num):
 				last_action_time = user_time_list[action_index-1]
@@ -71,22 +76,45 @@ class Dataset(object):
 
 				delta_time =  cur_action_time-last_action_time
 				if delta_time > session_thresh:
-					sess_action_user = user_action_list[sess_start_index:action_index]
+					sess_action_user = None
+					if sess_start_index == 0:
+						sess_action_user = user_action_list[sess_start_index:action_index]
+					else:
+						sess_action_user = user_action_list[sess_start_index-1:action_index]
 					user_sess_action_list.append(sess_action_user)
+					action_arr += sess_action_user
+					
 					sess_start_index = action_index
 
 					user_sess_action_num = len(sess_action_user)
+					# print("user_sess_action_num", user_sess_action_num, end=" ")
+					user_padding_action_num += user_sess_action_num
+
 					user_sess_action_num_List.append(user_sess_action_num)
-				
+					 
 					# if action_index == user_action_num-1:
-			sess_action_user = user_action_list[sess_start_index:]
+			sess_action_user = None
+			if sess_start_index == 0:	
+				sess_action_user = user_action_list[sess_start_index:]
+			else:
+				sess_action_user = user_action_list[sess_start_index-1:]
+
 			user_sess_action_list.append(sess_action_user)
-			user_sess_action_num_List.append(len(sess_action_user))
+			action_arr += sess_action_user
+
+			user_sess_action_num = len(sess_action_user)
+			# print("user_sess_action_num", user_sess_action_num)
+
+			user_sess_action_num_List.append(user_sess_action_num)
+			user_padding_action_num += user_sess_action_num
 
 			user_sess_action_arr.append(user_sess_action_list)
 
+			# print("user_padding_action_num", user_padding_action_num)
+
 		### split a list of ations per user into a list of session per user
 
+		### user_sess_num_list: sess_num per user
 		user_sess_num_list = [len(user_sess_list) for user_sess_list in user_sess_action_arr]
 
 		self.m_sess_offsets = self.setSessOffset(user_sess_num_list)
@@ -101,6 +129,10 @@ class Dataset(object):
 		self.m_item_map = itemmap
 
 		self.m_action_arr = np.array(action_arr)
+
+		print("padding user action num", len(self.m_action_arr))
+		print("total user_action_num", total_action_num)
+		# exit()
 
 	def setActionOffset(self, user_sess_action_num_List):
 		sess_num = len(user_sess_action_num_List)
@@ -136,41 +168,51 @@ class DataLoader():
 		self.m_bptt = BPTT        
 
 	def __iter__(self):
+		### sess_offsets: 
 		sess_offsets = self.dataset.m_sess_offsets
 
 		action_offsets = self.dataset.m_action_offsets
-		print("action num", len(action_offsets))
-
+		
 		action_arr = self.dataset.m_action_arr
 
-		user_num = len(self.dataset.m_sess_offsets) - 1
-		sess_num = len(self.dataset.m_action_offsets) - 1
+		print("action num", len(action_arr))
 
-		sess_iters = np.arange(self.m_batch_size)
-		max_sess_iter = sess_iters.max()
+		user_num = len(self.dataset.m_sess_offsets) - 1
+		# print("user num", user_num)
+
+		sess_num = len(self.dataset.m_action_offsets) - 1
+		# print("sess num", sess_num)
+
+		# sess_iters = np.arange(self.m_batch_size)
+		# max_sess_iter = sess_iters.max()
 
 		user_iters = np.arange(self.m_batch_size)
 		max_user_iter = user_iters.max()
 
-		sess_start = action_offsets[sess_iters]
-
-		# print("sess start", sess_start, sess_start.dtype)
-		sess_end = action_offsets[sess_iters+1]
-
 		action_user_offsets = action_offsets[sess_offsets]
+		# print("sess_offsets", sess_offsets)
+		# print("action_user_offsets", action_user_offsets)
 
+		sess_iters = sess_offsets[user_iters]
+		sess_start = action_offsets[sess_iters]
+		sess_end = action_offsets[sess_iters+1]
+			
 		user_start = action_user_offsets[user_iters]
 		user_end = action_user_offsets[user_iters+1]
-		
-		# start = click_offsets[iters]
-		# end = click_offsets[iters+1]
 
-		mask_sess_arr = []
+		mask_sess_arr_start = []
+		mask_sess_arr_end = []
+
+		mask_user_arr_start = []
+		mask_user_arr_end = []
+
 		finished = False
 
 		# window_size = self.m_bptt
 
 		total_action_num = 0
+
+		start_user_mask = np.zeros(self.m_batch_size)
 
 		# start = start + window_size-1
 
@@ -179,40 +221,51 @@ class DataLoader():
 		#     print("error window size for min lens")
 
 		while not finished:
+			
 			sess_min_len = int((sess_end-sess_start).min())
-			print("sess_min_len", sess_min_len)
-### iterate through sessions per user
+			# print("*"*10, sess_min_len)
+			# print("sess_start", sess_start)
+			# print("sess_end", sess_end)
+			
+			# print("*"*10, sess_min_len)
 			for i in range(sess_min_len-1):
-				
 				idx_input = action_arr[sess_start+i]
 				idx_target = action_arr[sess_start+i+1]
 
 				input_tensor = torch.LongTensor(idx_input)
 				target_tensor = torch.LongTensor(idx_target)
 
-				yield input_tensor, target_tensor, mask_sess_arr, mask_user_arr
+				if i > 0:
+					mask_sess_arr_start = []
+					mask_user_arr_start = []
+
+				yield input_tensor, target_tensor, mask_sess_arr_start, mask_user_arr_start, start_user_mask
 
 			sess_start = sess_start + sess_min_len - 1
 
-			mask_sess_arr = np.arange(self.m_batch_size)[(sess_end-sess_start) <= 1]
-			print("mask sess arr", mask_sess_arr)
-			for mask_sess in mask_sess_arr:
-				max_sess_iter = max_sess_iter+1
-				if max_sess_iter >= sess_num:
+			# print("sess start", sess_start)
+			# print("sess end", sess_end)
+			mask_sess_arr_start = np.arange(self.m_batch_size)[(sess_end-sess_start) <= 1]
+			# print("mask sess arr", mask_sess_arr)
+			for mask_sess in mask_sess_arr_start:
+				sess_iters[mask_sess] += 1
+				# max_sess_iter = max_sess_iter+1
+				if sess_iters[mask_sess] >= sess_num:
 					finished = True
 					# total_action_num += np.sum(end-start-1)
 					# print(mask_sess, "mask_sess_arr", mask_sess_arr)
 					# print("total_action_num", total_action_num)
 					break
 
-				sess_start[mask_sess] = action_offsets[max_sess_iter]
-				sess_end[mask_sess] = action_offsets[max_sess_iter+1]
+				sess_start[mask_sess] = action_offsets[sess_iters[mask_sess]]
+				sess_end[mask_sess] = action_offsets[sess_iters[mask_sess]+1]
 
-				sess_iters[mask_sess] = max_sess_iter
+			mask_user_arr_start = np.arange(self.m_batch_size)[(user_end-sess_start) <= 1]
 
-			mask_user_arr = np.arange(self.m_batch_size)[(user_end-sess_start) <= 1]
-			print("mask user arr", mask_user_arr)
-			for mask_user in mask_user_arr:
+			start_user_mask = np.ones(self.m_batch_size)
+
+			for mask_user in mask_user_arr_start:
+				
 				max_user_iter = max_user_iter + 1
 				if max_user_iter >= user_num:
 					finished = True
@@ -220,3 +273,9 @@ class DataLoader():
 				
 				user_start[mask_user] = action_user_offsets[max_user_iter]
 				user_end[mask_user] = action_user_offsets[max_user_iter+1]
+				
+				sess_iters[mask_user] = sess_offsets[max_user_iter]
+				sess_start[mask_user] = action_offsets[sess_iters[mask_user]]
+				sess_end[mask_user] = action_offsets[sess_iters[mask_user]+1]
+
+				start_user_mask[mask_user] = 0
