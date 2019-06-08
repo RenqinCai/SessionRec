@@ -36,7 +36,6 @@ class Dataset(object):
 			sess_len = len(item_sess_unit_list)
 
 			sess_action_num = 0
-			# sess_len_list.append(sess_len)
 
 			for action_index in range(sess_len):
 				item = item_sess_unit_list[action_index]
@@ -49,25 +48,18 @@ class Dataset(object):
 				item_id = self.itemmap[item]
 
 				sess_action_num += 1
-				# if itemmap is not None:
-				#     print(item_id, item)
+				
 				item_id_sess_arr.append(item_id)
-			# print("sess_action_num", sess_action_num)
+			
 			if sess_action_num != 0:
-			#     print("error action num zero")
-			# else:
 				sess_len_list.append(sess_action_num)
 
-		# print("item sess arr", item_sess_arr[:10])
-		# print("item id sess arr", item_id_sess_arr[:100])
 		self.click_offsets = self.getClickOffset(sess_num, sess_len_list)
 		self.item_arr = np.array(item_id_sess_arr)
 		self.sess_num = len(sess_len_list)
 
 		print("session num", self.sess_num)
 		print("action num", len(self.item_arr))
-		
-		# exit()
 
 	def addItem(self, item, itemmap=None):
 		if itemmap is None:
@@ -138,17 +130,6 @@ class DataLoader():
 
 		while not finished:
 			minlen = (end-start).min()
-			# print("*"*10, "min len", "*"*10, minlen)
-			# print("mask_sess_arr", mask_sess_arr)
-			# idx_input = item_arr[start]
-			# idx_target = item_arr[start+1]
-
-			# input_tensor = torch.LongTensor(idx_input)
-			# target_tensor = torch.LongTensor(idx_target)
-
-			# yield input_tensor, target_tensor, mask_sess_arr
-
-			# mask_sess_arr = []
 
 			for i in range(minlen-1):
 				idx_input_sample = item_arr[start+i]

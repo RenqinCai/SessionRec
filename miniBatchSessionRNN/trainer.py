@@ -66,9 +66,9 @@ class Trainer(object):
 			idx_target = idx_target.to(self.device)
 			self.optim.zero_grad()
 			
-			# hidden = self.model.init_hidden()
+			hidden = self.model.init_hidden()
 			# hidden = reset_hidden(hidden, mask).detach()
-			hidden = reset_hidden(hidden, mask).detach()
+			# hidden = reset_hidden(hidden, mask).detach()
 			# print("input size", input.size())
 			logit, hidden = self.model(idx_input, hidden)
 			# output sampling

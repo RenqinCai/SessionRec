@@ -40,8 +40,8 @@ class Evaluation(object):
 				idx_target = idx_target.to(self.device)
 
 				# hidden = reset_hidden(hidden, mask)
-				hidden = reset_hidden(hidden, mask).detach()
-
+				# hidden = reset_hidden(hidden, mask).detach()
+				hidden = self.model.init_hidden()
 				logit, hidden = self.model(idx_input, hidden)
 				# print("preds", logit.size())
 				logit_sampled = logit[:, idx_target.view(-1)]
