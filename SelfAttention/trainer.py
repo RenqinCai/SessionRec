@@ -15,7 +15,7 @@ class Trainer(object):
         self.optim = optim
         self.loss_func = loss_func
         self.topk = topk
-        self.evaluation = Evaluation(self.model, self.loss_func, use_cuda, self.topk)
+        self.evaluation = Evaluation(self.model, self.loss_func, use_cuda, self.topk, warm_start=args.warm_start)
         self.device = torch.device('cuda' if use_cuda else 'cpu')
         self.args = args
 
@@ -29,7 +29,7 @@ class Trainer(object):
             print("*"*10, epoch, "*"*5)
             st = time.time()
             train_loss = self.train_epoch(epoch, batch_size)
-            loss, recall, mrr = self.evaluation.eval(self.train_data, batch_size)
+            loss, recall, mrr = self.evaluation.eval(self.train_data, batch_size, debug=False)
             print("Train Epoch: {}, train loss: {:.4f},  loss: {:.4f}, recall: {:.4f}, mrr: {:.4f}, time: {}".format(epoch, train_loss, loss, recall, mrr, time.time() - st))
 
             loss, recall, mrr = self.evaluation.eval(self.eval_data, batch_size)
@@ -53,22 +53,19 @@ class Trainer(object):
         torch.autograd.set_detect_anomaly(False)
 
         dataloader = self.train_data
-        for input_x_batch, target_y_batch, x_len_batch in dataloader:
+        for input_x_batch, target_y_batch, idx_batch in dataloader:
             input_x_batch = input_x_batch.to(self.device)
             target_y_batch = target_y_batch.to(self.device)
 
             self.optim.zero_grad()
-#             print(input_x_batch, x_len_batch)
-            logit_batch = self.model(input_x_batch, x_len_batch)
+
+            logit_batch = self.model(input_x_batch)
 
             ### batch_size*batch_size
             logit_sampled_batch = logit_batch[:, target_y_batch.view(-1)]
-#             print(logit_sampled_batch.size(), target_y_batch.size() )
-#             print(logit_sampled_batch)
-#             print(target_y_batch)
             
             loss_batch = self.loss_func(logit_sampled_batch, target_y_batch)
-#             print(loss_batch)
+
             losses.append(loss_batch.item())
             loss_batch.backward()
 
