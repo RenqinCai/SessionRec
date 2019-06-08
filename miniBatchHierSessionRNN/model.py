@@ -54,40 +54,39 @@ class HierGRU4REC(nn.Module):
         embedded = embedded.unsqueeze(0)
 
         ### update user gru
+        ## initialize these two
         next_user_hidden = user_hidden
         next_sess_hidden = sess_hidden
-
-        if len(mask_sess) != 0:
-            # print("mask sess 1")
-            sess_hidden_user = sess_hidden[:, mask_sess, :]
-            user_hidden_user = user_hidden[:, mask_sess, :]
-            user_output, last_user_hidden = self.m_user_gru(sess_hidden_user, user_hidden_user)
-
-            next_user_hidden[:, mask_sess, :] = last_user_hidden
         
         torch.autograd.set_detect_anomaly(True)
 
         if len(mask_user) != 0:
             # print("mask user 1")
-            next_user_hidden[:, mask_user, :] = 0
+            user_hidden[:, mask_user, :] = 0
+            sess_hidden[:, mask_user, :] = 0
+
+        next_sess_output, next_sess_hidden = self.m_sess_gru(embedded, sess_hidden)
 
         if len(mask_sess) != 0:
-            # print("mask sess 2")
-            next_sess_hidden[:, mask_sess, :] = next_user_hidden[:, mask_sess, :]
+            mask_sess_hidden_user = next_sess_hidden[:, mask_sess, :]
+            mask_user_hidden_user = user_hidden[:, mask_sess, :]
 
-        sess_output, sess_hidden = self.m_sess_gru(embedded, sess_hidden)
+            mask_user_output, mask_next_user_hidden = self.m_user_gru(mask_sess_hidden_user, mask_user_hidden_user)
 
-        sess_output = sess_output.view(-1, sess_output.size(-1))
+            next_user_hidden[:, mask_sess, :] = mask_next_user_hidden
+
+            next_sess_hidden[:, mask_sess, :] = mask_next_user_hidden
+            
+        sess_output = next_sess_output.view(-1, next_sess_output.size(-1))
         logit = self.m_final_act(self.m_h2o(sess_output))
      
-        return logit, sess_hidden, next_sess_hidden
+        return logit, next_sess_hidden, next_user_hidden
 
     def init_hidden(self):
         
         h0 = torch.zeros(self.m_sess_num_layers, self.m_batch_size, self.m_sess_hidden_size).to(self.device)
         
         return h0
-
 
 class USERGRU4REC(nn.Module):
     def __init__(self, input_hidden_size, output_hidden_size, num_layers=1, dropout_hidden=0.5, dropout_input=0, batch_size=50, use_cuda=False):
