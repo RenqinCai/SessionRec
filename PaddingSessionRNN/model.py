@@ -52,24 +52,13 @@ class GRU4REC(nn.Module):
             hidden: GRU hidden state
         '''
 
-        if self.embedding_dim == -1:
-
-            embedded = input
-            embedded = self.onehot_encode(input)
-
-            if self.training and self.dropout_input > 0: 
-                embedded = self.embedding_dropout(embedded)
-            
-            if len(input.size()) == 2:
-                embedded = embedded.unsqueeze(0)
-
-        else:
+    
             # if len(input.size()) == 2:
             #     embedded = input.unsqueeze(0)
             # print("embedding size", embedded.size())
-            embedded = input
-            embedded = self.look_up(embedded)
-        
+        embedded = input
+        embedded = self.look_up(embedded)
+    
         embedded = embedded.transpose(0, 1)
 
         # print("embedded size", embedded.size(), input_len.shape)

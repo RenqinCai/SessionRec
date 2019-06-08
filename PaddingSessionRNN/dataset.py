@@ -3,6 +3,7 @@ import numpy as np
 import torch
 
 import pickle
+import random
 
 class Dataset(object):
 
@@ -20,6 +21,9 @@ class Dataset(object):
 			action_seq_arr_total = data_seq_arr
 
 		if data_name == "xing":
+			action_seq_arr_total = data_seq_arr
+
+		if data_name == "taobao":
 			action_seq_arr_total = data_seq_arr
 
 		seq_num = len(action_seq_arr_total)
@@ -75,19 +79,23 @@ class Dataset(object):
 			if action_num_seq < window_size :
 				window_size = action_num_seq
 
-			for action_index in range(observed_threshold, window_size):
-				input_sub_seq = action_seq_arr[:action_index]
-				target_sub_seq = action_seq_arr[action_index]
-				self.m_input_action_seq_list.append(input_sub_seq)
-				self.m_target_action_seq_list.append(target_sub_seq)
-				self.m_input_seq_len_list.append(action_index)
+			for action_index in range(action_num_seq):
+				if action_index < observed_threshold:
+					continue
 
-			for action_index in range(window_size, action_num_seq):
-				input_sub_seq = action_seq_arr[action_index-window_size+1:action_index]
-				target_sub_seq = action_seq_arr[action_index]
-				self.m_input_action_seq_list.append(input_sub_seq)
-				self.m_target_action_seq_list.append(target_sub_seq)
-				self.m_input_seq_len_list.append(action_index)
+				if action_index <= window_size:
+					input_sub_seq = action_seq_arr[:action_index]
+					target_sub_seq = action_seq_arr[action_index]
+					self.m_input_action_seq_list.append(input_sub_seq)
+					self.m_target_action_seq_list.append(target_sub_seq)
+					self.m_input_seq_len_list.append(action_index)
+				
+				if action_index > window_size:
+					input_sub_seq = action_seq_arr[action_index-window_size:action_index]
+					target_sub_seq = action_seq_arr[action_index]
+					self.m_input_action_seq_list.append(input_sub_seq)
+					self.m_target_action_seq_list.append(target_sub_seq)
+					self.m_input_seq_len_list.append(window_size)
 	
 	def __len__(self):
 		return len(self.m_input_action_seq_list)
@@ -113,8 +121,16 @@ class DataLoader():
 	def __init__(self, dataset, batch_size):
 		self.m_dataset = dataset
 		self.m_batch_size = batch_size
-
+		random.seed(30)
+	
 	def __iter__(self):
+		
+		print("shuffling")
+		temp = list(zip(self.m_dataset.m_input_action_seq_list, self.m_dataset.m_target_action_seq_list))
+		for i in range(1000):
+			random.shuffle(temp)
+		
+		self.m_dataset.m_input_action_seq_list, self.m_dataset.m_target_action_seq_list = zip(*temp)
 
 		batch_size = self.m_batch_size
 		input_action_seq_list = self.m_dataset.m_input_action_seq_list

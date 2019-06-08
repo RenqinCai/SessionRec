@@ -1,3 +1,8 @@
+"""
+command 
+python main.py --data_folder ../Data/xing/ --train_data train_item.pickle --valid_data test_item.pickle --test_data test_item.pickle --data_name xing --embedding_dim 300 --hidden_size 300 --lr 0.005
+"""
+
 import argparse
 import torch
 # import lib
@@ -10,7 +15,7 @@ from model import *
 from optimizer import *
 from trainer import *
 from torch.utils import data
-
+import pickle
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--hidden_size', default=50, type=int)
@@ -102,6 +107,28 @@ def count_parameters(model):
 	parameter_num = sum(p.numel() for p in model.parameters() if p.requires_grad)
 	print("parameter_num", parameter_num) 
 
+def save_data2pickle(data, data_dir, data_flag):
+	if data_flag == "train":
+		file_name = data_dir+".pickle"
+		print("file name", file_name)
+		f = open(file_name, "wb")
+		pickle.dump(data, f)
+		f.close()
+	
+	if data_flag == "valid":
+		file_name = data_dir+".pickle"
+		print("file name", file_name)
+		f = open(file_name, "wb")
+		pickle.dump(data, f)
+		f.close()
+
+	if data_flag == "test":
+		file_name = data_dir+".pickle"
+		print("file name", file_name)
+		f = open(file_name, "wb")
+		pickle.dump(data, f)
+		f.close()
+
 def main():
 	hidden_size = args.hidden_size
 	num_layers = args.num_layers
@@ -124,6 +151,10 @@ def main():
 
 	window_size = args.window_size
 
+	if embedding_dim == -1:
+		print("embedding dim not -1", embedding_dim)
+		raise AssertionError()
+
 	train_data = args.data_folder+args.train_data
 	valid_data = args.data_folder+args.valid_data
 	test_data = args.data_folder+args.valid_data
@@ -139,6 +170,16 @@ def main():
 	train_data = dataset.Dataset(train_data, data_name, observed_threshold, window_size)
 	valid_data = dataset.Dataset(valid_data, data_name, observed_threshold, window_size, itemmap=train_data.m_itemmap)
 	test_data = dataset.Dataset(test_data, data_name, observed_threshold, window_size)
+
+	# debug_train_data_name = args.data_folder+"train_"+args.data_name+"_"+str(args.window_size)
+	# debug_valid_data_name = args.data_folder+"valid_"+args.data_name+"_"+str(args.window_size)
+	# debug_test_data_name = args.data_folder+"test_"+args.data_name+"_"+str(args.window_size)
+	
+	# save_data2pickle(train_data, debug_train_data_name, "train")
+	# save_data2pickle(valid_data, debug_valid_data_name, "valid")
+	# save_data2pickle(test_data, debug_test_data_name, "test")
+
+	# exit()
 
 	if not args.is_eval:
 		make_checkpoint_dir()
