@@ -87,7 +87,7 @@ class Dataset(object):
                 self.m_input_action_seq_list.append(input_sub_seq)
                 self.m_target_action_seq_list.append(target_sub_seq)
                 self.m_input_seq_len_list.append(action_index)
-                self.m_time_action_seq_list.append(  np.asarray( time_seq_arr[action_index] - time_seq_arr[:action_index]) )
+                self.m_time_action_seq_list.append(  np.asarray( time_seq_arr[action_index]) - np.asarray(time_seq_arr[:action_index]) )
                 
 
             for action_index in range(window_size, action_num_seq):
@@ -96,7 +96,7 @@ class Dataset(object):
                 self.m_input_action_seq_list.append(input_sub_seq)
                 self.m_target_action_seq_list.append(target_sub_seq)
                 self.m_input_seq_len_list.append(action_index)
-                self.m_time_action_seq_list.append(  np.asarray(time_seq_arr[action_index] - time_seq_arr[action_index-window_size+1:action_index]) )
+                self.m_time_action_seq_list.append(  np.asarray(time_seq_arr[action_index]) - np.asarray(time_seq_arr[action_index-window_size+1:action_index]) )
 
     def __len__(self):
         return len(self.m_input_action_seq_list)

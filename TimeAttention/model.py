@@ -76,6 +76,7 @@ class TATT(nn.Module):
         
         self.beta = torch.tensor(1.0, requires_grad=True).to(self.device)
         self.gamma = torch.tensor(1.0, requires_grad=True).to(self.device)
+
         self = self.to(self.device)
 
     def forward(self, src, t, src_len):
