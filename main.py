@@ -36,17 +36,21 @@ parser.add_argument('--loss_type', default='TOP1', type=str)
 # parser.add_argument('--loss_type', default='BPR', type=str)
 parser.add_argument('--topk', default=5, type=int)
 # etc
+parser.add_argument('--bptt', default=1, type=int)
+
 parser.add_argument('--n_epochs', default=20, type=int)
 parser.add_argument('--time_sort', default=False, type=bool)
 parser.add_argument('--model_name', default='GRU4REC', type=str)
 parser.add_argument('--save_dir', default='models', type=str)
-parser.add_argument('--data_folder', default='data/preprocessed_data', type=str)
-parser.add_argument('--train_data', default='rsc15_train_full.txt', type=str)
-parser.add_argument('--valid_data', default='rsc15_test.txt', type=str)
-parser.add_argument('--test_data', default='rsc15_test.txt', type=str)
+parser.add_argument('--data_folder', default='../Data/movielen/1m/', type=str)
+parser.add_argument('--train_data', default='train_item.pickle', type=str)
+parser.add_argument('--valid_data', default='test_item.pickle', type=str)
+parser.add_argument('--test_data', default='test_item.pickle', type=str)
 parser.add_argument("--is_eval", action='store_true')
 parser.add_argument('--load_model', default=None,  type=str)
 parser.add_argument('--checkpoint_dir', type=str, default='checkpoint')
+parser.add_argument('--data_name', default=None, type=str)
+
 # Get the arguments
 args = parser.parse_args()
 args.cuda = torch.cuda.is_available()
@@ -54,10 +58,8 @@ args.cuda = torch.cuda.is_available()
 np.random.seed(args.seed)
 torch.manual_seed(7)
 
-
 if args.cuda:
 	torch.cuda.manual_seed(args.seed)
-
 
 def make_checkpoint_dir():
 	print("PARAMETER" + "-"*10)
@@ -79,7 +81,6 @@ def make_checkpoint_dir():
 
 	print("---------" + "-"*10)
 
-
 def init_model(model):
 	if args.sigma is not None:
 		for p in model.parameters():
@@ -93,24 +94,25 @@ def init_model(model):
 				else:
 					p.data.uniform_(0, sigma)
 
+def count_parameters(model):
+	parameter_num = sum(p.numel() for p in model.parameters() if p.requires_grad)
+	print("parameter_num", parameter_num) 
 
 def main():
-	print("Loading train data from {}".format(os.path.join(args.data_folder, args.train_data)))
-	print("Loading valid data from {}".format(os.path.join(args.data_folder, args.valid_data)))
-	print("Loading test data from {}\n".format(os.path.join(args.data_folder, args.test_data)))
 
-	# train_data = "../Data/yoochoose/processed/rsc15_train_full.txt"
-	# valid_data = "../Data/yoochoose/processed/rsc15_test.txt"
-	# test_data = "../Data/yoochoose/processed/rsc15_test.txt"
+	train_data = args.data_folder+args.train_data
+	valid_data = args.data_folder+args.valid_data
+	test_data = args.data_folder+args.valid_data
 
-	train_data = "../Data/xing/xing_train.pickle"
-	valid_data = "../Data/xing/xing_test.pickle"
-	test_data = "../Data/xing/xing_test.pickle"
+	print("Loading train data from {}".format(train_data))
+	print("Loading valid data from {}".format(valid_data))
+	print("Loading test data from {}\n".format(test_data))
 
-	train_data = dataset.Dataset(train_data)
-	# print(len(train_data.itemmap))
-	valid_data = dataset.Dataset(valid_data, itemmap=train_data.itemmap)
-	test_data = dataset.Dataset(test_data)
+	data_name = args.data_name
+
+	train_data = dataset.Dataset(train_data, data_name)
+	valid_data = dataset.Dataset(valid_data, data_name, itemmap=train_data.itemmap)
+	test_data = dataset.Dataset(test_data, data_name)
 
 	if not args.is_eval:
 		make_checkpoint_dir()
@@ -122,23 +124,32 @@ def main():
 	hidden_size = args.hidden_size
 	num_layers = args.num_layers
 	output_size = input_size
+
 	batch_size = args.batch_size
 	dropout_input = args.dropout_input
 	dropout_hidden = args.dropout_hidden
+
 	embedding_dim = args.embedding_dim
 	final_act = args.final_act
 	loss_type = args.loss_type
-
 	topk = args.topk
-
 	optimizer_type = args.optimizer_type
 	lr = args.lr
 	weight_decay = args.weight_decay
 	momentum = args.momentum
 	eps = args.eps
+	BPTT = args.bptt
 
 	n_epochs = args.n_epochs
 	time_sort = args.time_sort
+
+	print("loading train data from {}".format(args.train_data))
+	print("loading valid data from {}".format(args.valid_data))
+	print("loading test data from {}".format(args.test_data))
+	
+	train_data_loader = dataset.DataLoader(train_data, BPTT, batch_size, embedding_dim)
+	BPTT_valid = 1
+	valid_data_loader = dataset.DataLoader(valid_data, BPTT_valid, batch_size, embedding_dim)
 
 	if not args.is_eval:
 		model = GRU4REC(input_size, hidden_size, output_size,
@@ -153,6 +164,8 @@ def main():
 
 		# init weight
 		# See Balazs Hihasi(ICLR 2016), pg.7
+		
+		count_parameters(model)
 
 		init_model(model)
 
@@ -166,8 +179,8 @@ def main():
 		loss_function = LossFunction(loss_type=loss_type, use_cuda=args.cuda)
 
 		trainer = Trainer(model,
-							  train_data=train_data,
-							  eval_data=valid_data,
+							  train_data=train_data_loader,
+							  eval_data=valid_data_loader,
 							  optim=optimizer,
 							  use_cuda=args.cuda,
 							  loss_func=loss_function,
@@ -182,8 +195,8 @@ def main():
 			model = checkpoint["model"]
 			model.gru.flatten_parameters()
 			optim = checkpoint["optim"]
-			loss_function = lib.LossFunction(loss_type=loss_type, use_cuda=args.cuda)
-			evaluation = lib.Evaluation(model, loss_function, use_cuda=args.cuda)
+			loss_function = LossFunction(loss_type=loss_type, use_cuda=args.cuda)
+			evaluation = Evaluation(model, loss_function, use_cuda=args.cuda)
 			loss, recall, mrr = evaluation.eval(valid_data)
 			print("Final result: recall = {:.2f}, mrr = {:.2f}".format(recall, mrr))
 		else:

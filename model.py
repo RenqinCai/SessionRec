@@ -15,7 +15,7 @@ class GRU4REC(nn.Module):
         self.batch_size = batch_size
         self.use_cuda = use_cuda
         self.device = torch.device('cuda' if use_cuda else 'cpu')
-        self.onehot_buffer = self.init_emb()
+        # self.onehot_buffer = self.init_emb()
         self.h2o = nn.Linear(hidden_size, output_size)
 
         self.create_final_activation(final_act)
@@ -53,12 +53,19 @@ class GRU4REC(nn.Module):
         '''
 
         if self.embedding_dim == -1:
-            embedded = self.onehot_encode(input)
-            if self.training and self.dropout_input > 0: embedded = self.embedding_dropout(embedded)
-            embedded = embedded.unsqueeze(0)
+
+            embedded = input
+            # embedded = self.onehot_encode(input)
+
+            if self.training and self.dropout_input > 0: 
+                embedded = self.embedding_dropout(embedded)
+            
+            if len(input.size()) == 2:
+                embedded = embedded.unsqueeze(0)
 
         else:
-            embedded = input.unsqueeze(0)
+            if len(input.size()) == 2:
+                embedded = input.unsqueeze(0)
             # print("embedding size", embedded.size())
             embedded = self.look_up(embedded)
 
