@@ -148,7 +148,6 @@ class DataLoader():
             ### apply padding to seq in same batch
             ### sort seq by length (or shuffle)
     def batchifyData(self, input_action_seq_batch, target_action_seq_batch, idx_batch):
-
         longest_len_batch = max([len(seq_i) for seq_i in input_action_seq_batch])
         batch_size = len(input_action_seq_batch)
 

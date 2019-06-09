@@ -16,20 +16,13 @@ def get_recall(indices, targets, mask):
     targets = targets.view(-1, 1).expand_as(indices)
     hits = (targets == indices)
     val = int( mask.int().sum() )
-#     hits1 = hits
         
     hits *= mask.view(-1, 1).expand_as(indices)
-#     hits2 = hits
-
     hits = hits.nonzero()
 
     nhits = hits[:, :-1]
     recall = float(hits.size(0)) / float( mask.int().sum() )
-#     if val != targets.size(0) and recall > 0:
-#         print(hits1)
-#         print(mask)
-#         print(hits2)
-#         print(recall, val)
+
     return recall
 
 

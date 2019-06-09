@@ -79,7 +79,7 @@ class TATT(nn.Module):
 
         self = self.to(self.device)
 
-    def forward(self, src, t, src_len):
+    def forward(self, src, t):
         src_mask = (src == 0)
         x = self.embed(src)    
         if self.pe != None:

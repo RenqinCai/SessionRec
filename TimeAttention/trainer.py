@@ -14,7 +14,7 @@ class Trainer(object):
         self.optim = optim
         self.loss_func = loss_func
         self.topk = topk
-        self.evaluation = Evaluation(self.model, self.loss_func, use_cuda, self.topk)
+        self.evaluation = Evaluation(self.model, self.loss_func, use_cuda, self.topk, warm_start=args.warm_start)
         self.device = torch.device('cuda' if use_cuda else 'cpu')
         self.args = args
 
@@ -62,7 +62,7 @@ class Trainer(object):
 
             self.optim.zero_grad()
             
-            logit_batch = self.model(input_x_batch, input_t_batch, x_len_batch)
+            logit_batch = self.model(input_x_batch, input_t_batch)
         
             ### batch_size*batch_size
             logit_sampled_batch = logit_batch[:, target_y_batch.view(-1)]
