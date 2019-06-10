@@ -46,7 +46,7 @@ parser.add_argument('--topk', default=5, type=int)
 parser.add_argument('--bptt', default=1, type=int)
 parser.add_argument('--test_observed', default=5, type=int)
 parser.add_argument('--window_size', default=30, type=int)
-
+parser.add_argument('--shared_embedding', default=1, type=int)
 parser.add_argument('--n_epochs', default=20, type=int)
 parser.add_argument('--time_sort', default=False, type=bool)
 parser.add_argument('--model_name', default='GRU4REC', type=str)
@@ -195,6 +195,8 @@ def main():
 
 	# train_data_loader = data.DataLoader(train_data, **params_dataloader)
 	# valid_data_loader = data.DataLoader(valid_data, **params_dataloader)
+	shared_embedding = args.shared_embedding
+	
 
 	if not args.is_eval:
 		model = GRU4REC(window_size, input_size, hidden_size, output_size,
@@ -204,6 +206,7 @@ def main():
 							batch_size=batch_size,
 							dropout_input=dropout_input,
 							dropout_hidden=dropout_hidden,
+							shared_embedding=shared_embedding,
 							embedding_dim=embedding_dim
 							)
 

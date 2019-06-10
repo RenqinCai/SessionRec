@@ -23,7 +23,7 @@ class Dataset(object):
 		if data_name == "xing":
 			action_seq_arr_total = data_seq_arr
 
-		if data_name == "taobao":
+		if data_name == "tmall":
 			action_seq_arr_total = data_seq_arr
 
 		seq_num = len(action_seq_arr_total)
@@ -71,6 +71,7 @@ class Dataset(object):
 		print("finish loading item map")
 
 		print("loading data")
+		max_seq_len = 0
 		for seq_index in range(seq_num):
 			action_seq_arr = self.m_seq_list[seq_index]
 
@@ -83,19 +84,30 @@ class Dataset(object):
 				if action_index < observed_threshold:
 					continue
 
-				if action_index <= window_size:
+				if window_size == -1:
 					input_sub_seq = action_seq_arr[:action_index]
 					target_sub_seq = action_seq_arr[action_index]
 					self.m_input_action_seq_list.append(input_sub_seq)
 					self.m_target_action_seq_list.append(target_sub_seq)
 					self.m_input_seq_len_list.append(action_index)
-				
-				if action_index > window_size:
-					input_sub_seq = action_seq_arr[action_index-window_size:action_index]
-					target_sub_seq = action_seq_arr[action_index]
-					self.m_input_action_seq_list.append(input_sub_seq)
-					self.m_target_action_seq_list.append(target_sub_seq)
+					if action_index > max_seq_len:
+						max_seq_len = action_index
+				else:
+					if action_index <= window_size:
+						input_sub_seq = action_seq_arr[:action_index]
+						target_sub_seq = action_seq_arr[action_index]
+						self.m_input_action_seq_list.append(input_sub_seq)
+						self.m_target_action_seq_list.append(target_sub_seq)
+						self.m_input_seq_len_list.append(action_index)
+					
+					if action_index > window_size:
+						input_sub_seq = action_seq_arr[action_index-window_size:action_index]
+						target_sub_seq = action_seq_arr[action_index]
+						self.m_input_action_seq_list.append(input_sub_seq)
+						self.m_target_action_seq_list.append(target_sub_seq)
 					self.m_input_seq_len_list.append(window_size)
+		
+		print("max_seq_len", max_seq_len)
 	
 	def __len__(self):
 		return len(self.m_input_action_seq_list)
@@ -121,14 +133,14 @@ class DataLoader():
 	def __init__(self, dataset, batch_size):
 		self.m_dataset = dataset
 		self.m_batch_size = batch_size
-		random.seed(30)
+		# random.seed(30)
 	
 	def __iter__(self):
 		
 		print("shuffling")
 		temp = list(zip(self.m_dataset.m_input_action_seq_list, self.m_dataset.m_target_action_seq_list))
-		for i in range(1000):
-			random.shuffle(temp)
+		# for i in range(1000):
+		random.shuffle(temp)
 		
 		self.m_dataset.m_input_action_seq_list, self.m_dataset.m_target_action_seq_list = zip(*temp)
 

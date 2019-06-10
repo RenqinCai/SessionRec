@@ -1,8 +1,9 @@
 from torch import nn
 import torch
+import torch.nn.functional as F
 
 class GRU4REC(nn.Module):
-    def __init__(self, window_size, input_size, hidden_size, output_size, num_layers=1, final_act='tanh', dropout_hidden=.5, dropout_input=0, batch_size=50, embedding_dim=-1, use_cuda=False):
+    def __init__(self, window_size, input_size, hidden_size, output_size, num_layers=1, final_act='tanh', dropout_hidden=.5, dropout_input=0, batch_size=50, shared_embedding=1, embedding_dim=-1, use_cuda=False):
         super(GRU4REC, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -17,14 +18,24 @@ class GRU4REC(nn.Module):
         self.device = torch.device('cuda' if use_cuda else 'cpu')
         
         self.onehot_buffer = self.init_emb()
-        self.h2o = nn.Linear(hidden_size, output_size)
-        self.create_final_activation(final_act)
-
+        
         if self.embedding_dim != -1:
             self.look_up = nn.Embedding(input_size, self.embedding_dim)
             self.gru = nn.GRU(self.embedding_dim, self.hidden_size, self.num_layers, dropout=self.dropout_hidden)
         else:
             self.gru = nn.GRU(self.input_size, self.hidden_size, self.num_layers, dropout=self.dropout_hidden)
+
+        self.m_shared_embedding = shared_embedding
+        
+        if self.m_shared_embedding:
+            print("share embedding")
+            self.m_output_layer = self.look_up.weight
+        else:
+            self.h2o = nn.Linear(hidden_size, output_size)
+            # self.m_output_bias = 
+
+        self.create_final_activation(final_act)
+
         self = self.to(self.device)
 
     def create_final_activation(self, final_act):
@@ -62,26 +73,44 @@ class GRU4REC(nn.Module):
         embedded = embedded.transpose(0, 1)
 
         # print("embedded size", embedded.size(), input_len.shape)
-        embedded_pad = torch.nn.utils.rnn.pack_padded_sequence(embedded, input_len)
-        # print("embedded_pad size", embedded_pad.size())
-        output, hidden = self.gru(embedded_pad, hidden) # (sequence, B, H)
+        # embedded_pad = torch.nn.utils.rnn.pack_padded_sequence(embedded, input_len)
+        # # print("embedded_pad size", embedded_pad.size())
+        # output, hidden = self.gru(embedded_pad, hidden) # (sequence, B, H)
 
-        output, _ = torch.nn.utils.rnn.pad_packed_sequence(output)
-        output = output.contiguous()
+        # output, _ = torch.nn.utils.rnn.pad_packed_sequence(output)
+        # output = output.contiguous()
         # print("output size", output.size())
+        output = self.padGRU(embedded, hidden, input_len)
 
         last_output = output[-1, :, :]
         # print("lastoutput size", last_output.size())
 
         last_output = last_output.view(-1, last_output.size(-1))  # (B,H)
-        logit = self.final_activation(self.h2o(last_output)) ## (B, output_size)
+        # logit = self.h2o(last_output)
+
+        if self.m_shared_embedding:
+            logit = F.linear(last_output, self.m_output_layer)
+        else:
+            logit = self.h2o(last_output) ## (B, output_size)
+
+        logit = self.final_activation(logit)
 
         return logit, hidden
+
+    def padGRU(self, embed_input, hidden, input_len):
+        embedded_pad = torch.nn.utils.rnn.pack_padded_sequence(embed_input, input_len)
+        output, hidden = self.gru(embedded_pad, hidden)
+        output, _ = torch.nn.utils.rnn.pad_packed_sequence(output)
+        output = output.contiguous()
+        return output
+
 
     def init_emb(self):
         '''
         Initialize the one_hot embedding buffer, which will be used for producing the one-hot embeddings efficiently
         '''
+        if self.window_size == -1:
+            return
         onehot_buffer = torch.FloatTensor(self.window_size, self.batch_size, self.output_size)
         onehot_buffer = onehot_buffer.to(self.device)
 
