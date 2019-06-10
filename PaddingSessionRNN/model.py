@@ -1,8 +1,9 @@
 from torch import nn
 import torch
+import torch.nn.functional as F
 
 class GRU4REC(nn.Module):
-    def __init__(self, window_size, input_size, hidden_size, output_size, num_layers=1, final_act='tanh', dropout_hidden=.5, dropout_input=0, batch_size=50, embedding_dim=-1, use_cuda=False):
+    def __init__(self, window_size, input_size, hidden_size, output_size, num_layers=1, final_act='tanh', dropout_hidden=.5, dropout_input=0, batch_size=50, embedding_dim=-1, use_cuda=False, shared_embedding=True):
         super(GRU4REC, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -16,15 +17,27 @@ class GRU4REC(nn.Module):
         self.window_size = window_size
         self.device = torch.device('cuda' if use_cuda else 'cpu')
         
-        self.onehot_buffer = self.init_emb()
+
+        
         self.h2o = nn.Linear(hidden_size, output_size)
+            
         self.create_final_activation(final_act)
 
-        if self.embedding_dim != -1:
-            self.look_up = nn.Embedding(input_size, self.embedding_dim)
-            self.gru = nn.GRU(self.embedding_dim, self.hidden_size, self.num_layers, dropout=self.dropout_hidden)
+#         if self.embedding_dim != -1:
+        self.look_up = nn.Embedding(input_size, self.embedding_dim).to(self.device)
+        self.gru = nn.GRU(self.embedding_dim, self.hidden_size, self.num_layers, dropout=self.dropout_hidden)
+#         else:
+#             self.onehot_buffer = self.init_emb()
+#             self.embed = torch.FloatTensor(self.window_size, self.batch_size, self.output_size)
+#             self.embed = onehot_buffer.to(self.device)   
+#             self.look_up = self.onehot_encode
+#             self.gru = nn.GRU(self.input_size, self.hidden_size, self.num_layers, dropout=self.dropout_hidden)
+            
+        if shared_embedding:
+            self.out_matrix = self.look_up.weight.to(self.device)
         else:
-            self.gru = nn.GRU(self.input_size, self.hidden_size, self.num_layers, dropout=self.dropout_hidden)
+            self.out_matrix = torch.rand(output_size, hidden_size, requires_grad=True).to(self.device)
+            
         self = self.to(self.device)
 
     def create_final_activation(self, final_act):
@@ -74,18 +87,11 @@ class GRU4REC(nn.Module):
         # print("lastoutput size", last_output.size())
 
         last_output = last_output.view(-1, last_output.size(-1))  # (B,H)
-        logit = self.final_activation(self.h2o(last_output)) ## (B, output_size)
-
+        output = F.linear(last_output, self.out_matrix)
+#         logit = self.final_activation(output) ## (B, output_size)
+        logit = output
         return logit, hidden
 
-    def init_emb(self):
-        '''
-        Initialize the one_hot embedding buffer, which will be used for producing the one-hot embeddings efficiently
-        '''
-        onehot_buffer = torch.FloatTensor(self.window_size, self.batch_size, self.output_size)
-        onehot_buffer = onehot_buffer.to(self.device)
-
-        return onehot_buffer
 
     def onehot_encode(self, input):
         """

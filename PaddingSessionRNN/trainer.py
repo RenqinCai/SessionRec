@@ -15,7 +15,7 @@ class Trainer(object):
         self.optim = optim
         self.loss_func = loss_func
         self.topk = topk
-        self.evaluation = Evaluation(self.model, self.loss_func, use_cuda, self.topk)
+        self.evaluation = Evaluation(self.model, self.loss_func, use_cuda, self.topk, warm_start=args.warm_start)
         self.device = torch.device('cuda' if use_cuda else 'cpu')
         self.args = args
 
@@ -34,18 +34,18 @@ class Trainer(object):
 
             loss, recall, mrr = self.evaluation.eval(self.eval_data, batch_size)
             print("Epoch: {}, loss: {:.4f}, recall: {:.4f}, mrr: {:.4f}, time: {}".format(epoch, loss, recall, mrr, time.time() - st))
-            checkpoint = {
-                'model': self.model.state_dict(),
-                'args': self.args,
-                'epoch': epoch,
-                'optim': self.optim,
-                'loss': loss,
-                'recall': recall,
-                'mrr': mrr
-            }
-            model_name = os.path.join(self.args.checkpoint_dir, "model_{0:05d}.pt".format(epoch))
-            torch.save(checkpoint, model_name)
-            print("Save model as %s" % model_name)
+#             checkpoint = {
+#                 'model': self.model.state_dict(),
+#                 'args': self.args,
+#                 'epoch': epoch,
+#                 'optim': self.optim,
+#                 'loss': loss,
+#                 'recall': recall,
+#                 'mrr': mrr
+#             }
+#             model_name = os.path.join(self.args.checkpoint_dir, "model_{0:05d}.pt".format(epoch))
+#             torch.save(checkpoint, model_name)
+#             print("Save model as %s" % model_name)
 
     def train_epoch(self, epoch, batch_size):
         self.model.train()
@@ -58,7 +58,7 @@ class Trainer(object):
             return hidden
        
         dataloader = self.train_data
-        for input_x_batch, target_y_batch, x_len_batch in dataloader:
+        for input_x_batch, target_y_batch, x_len_batch, _ in dataloader:
             input_x_batch = input_x_batch.to(self.device)
             target_y_batch = target_y_batch.to(self.device)
 
@@ -75,12 +75,12 @@ class Trainer(object):
             loss_batch = self.loss_func(logit_sampled_batch, target_y_batch)
             losses.append(loss_batch.item())
             loss_batch.backward()
-            max_norm = 1.0
+#             max_norm = 1.0
 
-            for name, param in self.model.named_parameters():
-                if param.requires_grad:
-                    print("parameters", name, param.data)
-            torch.nn.utils.clip_grad_norm(self.model.parameters(), max_norm)
+#             for name, param in self.model.named_parameters():
+#                 if param.requires_grad:
+#                     print("parameters", name, param.data)
+#             torch.nn.utils.clip_grad_norm(self.model.parameters(), max_norm)
             # print("after clipping")
             # for name, param in self.model.named_parameters():
             #     if param.requires_grad:

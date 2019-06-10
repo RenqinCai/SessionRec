@@ -4,11 +4,12 @@ import dataset
 from metric import *
 
 class Evaluation(object):
-	def __init__(self, model, loss_func, use_cuda, k=20):
+	def __init__(self, model, loss_func, use_cuda, k=20, warm_start=5):
 		self.model = model
 		self.loss_func = loss_func
 
 		self.topk = k
+		self.warm_start = warm_start
 		self.device = torch.device('cuda' if use_cuda else 'cpu')
 
 	def eval(self, eval_data, batch_size):
@@ -17,6 +18,7 @@ class Evaluation(object):
 		losses = []
 		recalls = []
 		mrrs = []
+		weights = []
 
 		# losses = None
 		# recalls = None
@@ -28,10 +30,11 @@ class Evaluation(object):
 
 		with torch.no_grad():
 			total_test_num = []
-			for input_x_batch, target_y_batch, x_len_batch in dataloader:
+			for input_x_batch, target_y_batch, x_len_batch, idx_batch in dataloader:
 				input_x_batch = input_x_batch.to(self.device)
 				target_y_batch = target_y_batch.to(self.device)
-				
+				warm_start_mask = (idx_batch>=self.warm_start).to(self.device)
+                
 				hidden = self.model.init_hidden()
 
 				logit_batch, hidden = self.model(input_x_batch, hidden, x_len_batch)
@@ -41,16 +44,17 @@ class Evaluation(object):
 
 				losses.append(loss_batch.item())
 				
-				recall_batch, mrr_batch = evaluate(logit_batch, target_y_batch, k=self.topk)
+				recall_batch, mrr_batch = evaluate(logit_batch, target_y_batch, warm_start_mask, k=self.topk)
 
+				weights.append( int( warm_start_mask.int().sum() ) )
 				recalls.append(recall_batch)
 				mrrs.append(mrr_batch)
 
 				total_test_num.append(target_y_batch.view(-1).size(0))
 
 		mean_losses = np.mean(losses)
-		mean_recall = np.mean(recalls)
-		mean_mrr = np.mean(mrrs)
+		mean_recall = np.average(recalls, weights=weights)
+		mean_mrr = np.average(mrrs, weights=weights)
 		print("total_test_num", np.sum(total_test_num))
 
 		return mean_losses, mean_recall, mean_mrr

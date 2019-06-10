@@ -46,6 +46,7 @@ parser.add_argument('--topk', default=5, type=int)
 parser.add_argument('--bptt', default=1, type=int)
 parser.add_argument('--test_observed', default=5, type=int)
 parser.add_argument('--window_size', default=30, type=int)
+parser.add_argument('--warm_start', default=5, type=int)
 
 parser.add_argument('--n_epochs', default=20, type=int)
 parser.add_argument('--time_sort', default=False, type=bool)
