@@ -38,9 +38,10 @@ parser.add_argument("--embedding_dim", type=int, default=-1,
 parser.add_argument('--loss_type', default='TOP1', type=str)
 # parser.add_argument('--loss_type', default='BPR', type=str)
 parser.add_argument('--topk', default=5, type=int)
+parser.add_argument('--warm_start', default=5, type=int)
 # etc
 parser.add_argument('--bptt', default=1, type=int)
-parser.add_argument('--test_observed', default=5, type=int)
+parser.add_argument('--test_observed', default=1, type=int) ### sequence with length of at least 1
 parser.add_argument('--window_size', default=30, type=int)
 
 parser.add_argument('--n_epochs', default=20, type=int)
@@ -111,7 +112,7 @@ def main():
 
     train_data = args.data_folder+args.train_data
     valid_data = args.data_folder+args.valid_data
-    test_data = args.data_folder+args.vest_data
+    test_data = args.data_folder+args.test_data
 
     print("Loading train data from {}".format(train_data))
     print("Loading valid data from {}".format(valid_data))

@@ -92,7 +92,7 @@ class SATT(nn.Module):
         
         self = self.to(self.device)
 
-    def forward(self, src, src_len):
+    def forward(self, src):
         x = self.embed(src)
         src_mask = (src == 0)
         if self.pe != None:

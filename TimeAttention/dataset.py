@@ -40,7 +40,7 @@ class Dataset(object):
 
         self.m_input_action_seq_list = []
         self.m_target_action_seq_list = []
-        self.m_input_seq_len_list = []
+        self.m_input_seq_idx_list = []
         self.m_time_action_seq_list = []
         
         print("loading item map")
@@ -86,8 +86,8 @@ class Dataset(object):
                 target_sub_seq = action_seq_arr[action_index]
                 self.m_input_action_seq_list.append(input_sub_seq)
                 self.m_target_action_seq_list.append(target_sub_seq)
-                self.m_input_seq_len_list.append(action_index)
-                self.m_time_action_seq_list.append(  np.asarray( time_seq_arr[action_index] - time_seq_arr[:action_index]) )
+                self.m_input_seq_idx_list.append(action_index)
+                self.m_time_action_seq_list.append(  np.asarray( time_seq_arr[action_index]) - np.asarray(time_seq_arr[:action_index]) )
                 
 
             for action_index in range(window_size, action_num_seq):
@@ -95,8 +95,8 @@ class Dataset(object):
                 target_sub_seq = action_seq_arr[action_index]
                 self.m_input_action_seq_list.append(input_sub_seq)
                 self.m_target_action_seq_list.append(target_sub_seq)
-                self.m_input_seq_len_list.append(action_index)
-                self.m_time_action_seq_list.append(  np.asarray(time_seq_arr[action_index] - time_seq_arr[action_index-window_size+1:action_index]) )
+                self.m_input_seq_idx_list.append(action_index)
+                self.m_time_action_seq_list.append(  np.asarray(time_seq_arr[action_index]) - np.asarray(time_seq_arr[action_index-window_size+1:action_index]) )
 
     def __len__(self):
         return len(self.m_input_action_seq_list)
@@ -128,6 +128,7 @@ class DataLoader():
         input_action_seq_list = self.m_dataset.m_input_action_seq_list
         target_action_seq_list = self.m_dataset.m_target_action_seq_list
         input_time_seq_list = self.m_dataset.m_time_action_seq_list
+        input_seq_idx_list = self.m_dataset.m_input_seq_idx_list
         
         input_num = len(input_action_seq_list)
         batch_num = int(input_num/batch_size)
@@ -136,48 +137,47 @@ class DataLoader():
             x_batch = []
             y_batch = []
             t_batch = []
+            idx_batch = []
 
             for seq_index_batch in range(batch_size):
                 seq_index = batch_index*batch_size+seq_index_batch
-                x = input_action_seq_list[seq_index]
-                y = target_action_seq_list[seq_index]
-                t = input_time_seq_list[seq_index]
 
-                x_batch.append(x)
-                y_batch.append(y)
-                t_batch.append(t)
+                x_batch.append(input_action_seq_list[seq_index])
+                y_batch.append(target_action_seq_list[seq_index])
+                t_batch.append(input_time_seq_list[seq_index])
+                idx_batch.append(input_seq_idx_list[seq_index])
             
-            
-            x_batch, y_batch, t_batch, x_len_batch = self.batchifyData(x_batch, y_batch, t_batch)
+            x_batch, y_batch, t_batch, idx_batch = self.batchifyData(x_batch, y_batch, t_batch, idx_batch)
 
             x_batch_tensor = torch.LongTensor(x_batch)
             y_batch_tensor = torch.LongTensor(y_batch)
             t_batch_tensor = torch.FloatTensor(t_batch)
+            idx_batch_tensor = torch.LongTensor(idx_batch)
             
-            yield x_batch_tensor, y_batch_tensor, t_batch_tensor, x_len_batch
+            yield x_batch_tensor, y_batch_tensor, t_batch_tensor, idx_batch_tensor
 
-    def batchifyData(self, input_action_seq_batch, target_action_seq_batch, input_time_seq_batch):
-        seq_len_batch = [len(seq_i) for seq_i in input_action_seq_batch]
-
-        longest_len_batch = max(seq_len_batch)
+    def batchifyData(self, input_action_seq_batch, target_action_seq_batch, input_time_seq_batch, idx_batch):
+        longest_len_batch = max([len(seq_i) for seq_i in input_action_seq_batch])
         batch_size = len(input_action_seq_batch)
 
         pad_input_action_seq_batch = np.zeros((batch_size, longest_len_batch))
         pad_target_action_seq_batch = np.zeros(batch_size)
         pad_input_time_seq_batch = np.zeros((batch_size, longest_len_batch))
         pad_seq_len_batch = np.zeros(batch_size)
-
-        zip_batch = sorted(zip(seq_len_batch, input_action_seq_batch, target_action_seq_batch, input_time_seq_batch), key=lambda x: x[0], reverse=True)
+        pad_idx_batch = np.zeros(batch_size)
+        
+        zip_batch = sorted(zip(idx_batch, input_action_seq_batch, target_action_seq_batch, input_time_seq_batch), key=lambda x: x[0], reverse=True)
 
 #         zip_batch = zip(seq_len_batch, input_action_seq_batch, target_action_seq_batch, input_time_seq_batch)
 
-        for seq_i, (seq_len_i, input_action_seq_i, target_action_seq_i, input_time_seq_i) in enumerate(zip_batch):
+        for seq_i, (seq_idx, input_action_seq_i, target_action_seq_i, input_time_seq_i) in enumerate(zip_batch):
+            seq_len_i = len(input_action_seq_i)
             pad_input_action_seq_batch[seq_i, 0:seq_len_i] = input_action_seq_i
             pad_input_time_seq_batch[seq_i, 0:seq_len_i] = input_time_seq_i
             pad_target_action_seq_batch[seq_i] = target_action_seq_i
-            pad_seq_len_batch[seq_i] = seq_len_i
+            pad_idx_batch[seq_i] = seq_idx
         ### map item id back to start from 0
         # target_action_seq_batch = [target_i-1 for target_i in target_action_seq_batch]
 
-        return pad_input_action_seq_batch, pad_target_action_seq_batch, pad_input_time_seq_batch, pad_seq_len_batch
+        return pad_input_action_seq_batch, pad_target_action_seq_batch, pad_input_time_seq_batch, pad_idx_batch
 
