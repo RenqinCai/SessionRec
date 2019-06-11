@@ -75,7 +75,7 @@ class TTransformer(nn.Module):
 
 # self-attention model with mask
 class SATT(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, num_layers=1, num_heads=1, use_cuda=True, batch_size=50, dropout_input=0, dropout_hidden=0.5, embedding_dim=-1, position_embedding=False, shared_embeding=True):
+    def __init__(self, input_size, hidden_size, output_size, num_layers=1, num_heads=1, use_cuda=True, batch_size=50, dropout_input=0, dropout_hidden=0.5, embedding_dim=-1, position_embedding=False, shared_embedding=True):
         super().__init__()
         
         self.device = torch.device('cuda' if use_cuda else 'cpu')
@@ -85,7 +85,7 @@ class SATT(nn.Module):
         self.encode_layers = nn.ModuleList([Transformer(hidden_size, num_heads, dropout=dropout_hidden) for i in range(num_layers)])
         self.decode = Transformer(hidden_size, num_heads, dropout=dropout_hidden)
 #         self.attn = nn.MultiheadAttention(hidden_size, num_heads, dropout=dropout_hidden)
-        if shared_embeding:
+        if shared_embedding:
             self.out_matrix = self.embed.weight.to(self.device)
         else:
             self.out_matrix = torch.rand(hidden_size, output_size, requires_grad=True).to(self.device)
@@ -105,6 +105,7 @@ class SATT(nn.Module):
         trg = self.embed(src[:, -1]).unsqueeze(0)  ### last input
         d_output = self.decode(trg, x, x, src_mask)
 #         d_output, _ = self.attn(trg, x, x, src_mask)
+    
         output = F.linear(d_output.squeeze(0), self.out_matrix)
         
         return output

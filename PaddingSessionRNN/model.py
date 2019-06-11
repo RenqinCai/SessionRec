@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 
 class GRU4REC(nn.Module):
-    def __init__(self, window_size, input_size, hidden_size, output_size, num_layers=1, final_act='tanh', dropout_hidden=.5, dropout_input=0, batch_size=50, embedding_dim=-1, use_cuda=False, shared_embedding=True):
+    def __init__(self, window_size, input_size, hidden_size, output_size, num_layers=1, final_act='tanh', dropout_hidden=.8, dropout_input=0, batch_size=50, embedding_dim=-1, use_cuda=False, shared_embedding=True):
         super(GRU4REC, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -16,7 +16,6 @@ class GRU4REC(nn.Module):
         self.use_cuda = use_cuda
         self.window_size = window_size
         self.device = torch.device('cuda' if use_cuda else 'cpu')
-        
 
         
         self.h2o = nn.Linear(hidden_size, output_size)
