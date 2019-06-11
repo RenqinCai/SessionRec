@@ -17,8 +17,6 @@ class GRU4REC(nn.Module):
         self.window_size = window_size
         self.device = torch.device('cuda' if use_cuda else 'cpu')
         
-
-        
         self.h2o = nn.Linear(hidden_size, output_size)
             
         self.create_final_activation(final_act)
