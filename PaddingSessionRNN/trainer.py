@@ -1,3 +1,4 @@
+
 # import lib
 from evaluation import *
 import time
@@ -75,12 +76,12 @@ class Trainer(object):
             loss_batch = self.loss_func(logit_sampled_batch, target_y_batch)
             losses.append(loss_batch.item())
             loss_batch.backward()
-#             max_norm = 1.0
+            max_norm = 5.0
 
 #             for name, param in self.model.named_parameters():
 #                 if param.requires_grad:
 #                     print("parameters", name, param.data)
-#             torch.nn.utils.clip_grad_norm(self.model.parameters(), max_norm)
+            torch.nn.utils.clip_grad_norm(self.model.parameters(), max_norm)
             # print("after clipping")
             # for name, param in self.model.named_parameters():
             #     if param.requires_grad:
@@ -106,4 +107,3 @@ class Trainer(object):
         #     self.optim.step()
 
         mean_losses = np.mean(losses)
-        return mean_losses
