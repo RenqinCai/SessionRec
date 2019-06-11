@@ -11,7 +11,6 @@ from optimizer import *
 from trainer import *
 from torch.utils import data
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--hidden_size', default=50, type=int)
 parser.add_argument('--num_layers', default=1, type=int)
@@ -43,6 +42,8 @@ parser.add_argument('--warm_start', default=5, type=int)
 parser.add_argument('--bptt', default=1, type=int)
 parser.add_argument('--test_observed', default=1, type=int) ### sequence with length of at least 1
 parser.add_argument('--window_size', default=30, type=int)
+parser.add_argument('--position_embedding', default=0, type=int)
+parser.add_argument('--shared_embedding', default=1, type=int)
 
 parser.add_argument('--n_epochs', default=20, type=int)
 parser.add_argument('--time_sort', default=False, type=bool)
@@ -144,7 +145,9 @@ def main():
                                                 batch_size=args.batch_size,
                                                 dropout_input=args.dropout_input,
                                                 dropout_hidden=args.dropout_hidden,
-                                                embedding_dim=args.embedding_dim
+                                                embedding_dim=args.embedding_dim,
+                                                position_embedding=(args.position_embedding == 1),
+                                                shared_embedding=(args.shared_embedding == 1)
                                                 )
 
         # init weight
@@ -152,7 +155,6 @@ def main():
         
         count_parameters(model)
 
-#         init_model(model)
 
         optimizer = Optimizer(model.parameters(), optimizer_type=args.optimizer_type,
                                                   lr=args.lr,
@@ -170,6 +172,9 @@ def main():
                                   args=args)
 
         trainer.train(0, args.n_epochs - 1, args.batch_size)
+        
+
+        
     else:
         if args.load_model is not None:
             print("Loading pre trained model from {}".format(args.load_model))

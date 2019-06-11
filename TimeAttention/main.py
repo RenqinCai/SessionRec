@@ -11,7 +11,6 @@ from optimizer import *
 from trainer import *
 from torch.utils import data
 
-
 parser = argparse.ArgumentParser()
 parser.add_argument('--hidden_size', default=50, type=int)
 parser.add_argument('--num_layers', default=1, type=int)
@@ -153,6 +152,7 @@ def main():
         count_parameters(model)
 
 #         init_model(model)
+            
 
         optimizer = Optimizer(model.parameters(), optimizer_type=args.optimizer_type,
                                                   lr=args.lr,
