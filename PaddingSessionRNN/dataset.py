@@ -69,7 +69,7 @@ class Dataset(object):
 			self.m_seq_list.append(action_seq_list)
 
 		print("finish loading item map")
-		print("observed_threshold", observed_threshold, window_size)
+
 		print("loading data")
 		for seq_index in range(seq_num):
 			action_seq_arr = self.m_seq_list[seq_index]
@@ -84,27 +84,18 @@ class Dataset(object):
 					continue
 
 				if action_index <= window_size:
-					input_sub_seq = action_seq_arr[:action_index-1]
-					# if itemmap is None:
-					
-					# 	random.shuffle(input_sub_seq)
-					
-					input_sub_seq.append(action_seq_arr[action_index-1])
+					input_sub_seq = action_seq_arr[:action_index]
 					target_sub_seq = action_seq_arr[action_index]
 					self.m_input_action_seq_list.append(input_sub_seq)
 					self.m_target_action_seq_list.append(target_sub_seq)
 					self.m_input_seq_idx_list.append(action_index)
 
 				if action_index > window_size:
-					input_sub_seq = action_seq_arr[action_index-window_size:action_index-1]
-					# if itemmap is None:
-					# 	random.shuffle(input_sub_seq)
-					input_sub_seq.append(action_seq_arr[action_index-1])
+					input_sub_seq = action_seq_arr[action_index-window_size:action_index]
 					target_sub_seq = action_seq_arr[action_index]
 					self.m_input_action_seq_list.append(input_sub_seq)
 					self.m_target_action_seq_list.append(target_sub_seq)
 					self.m_input_seq_idx_list.append(action_index)
-
 	
 	def __len__(self):
 		return len(self.m_input_action_seq_list)

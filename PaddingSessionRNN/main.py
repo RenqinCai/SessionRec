@@ -42,12 +42,12 @@ parser.add_argument("--embedding_dim", type=int, default=-1,
 parser.add_argument('--loss_type', default='TOP1', type=str)
 # parser.add_argument('--loss_type', default='BPR', type=str)
 parser.add_argument('--topk', default=5, type=int)
+parser.add_argument('--warm_start', default=5, type=int)
 # etc
 parser.add_argument('--bptt', default=1, type=int)
 parser.add_argument('--test_observed', default=5, type=int)
 parser.add_argument('--window_size', default=30, type=int)
-parser.add_argument('--warm_start', default=5, type=int)
-
+parser.add_argument('--shared_embedding', default=1, type=int)
 parser.add_argument('--n_epochs', default=20, type=int)
 parser.add_argument('--time_sort', default=False, type=bool)
 parser.add_argument('--model_name', default='GRU4REC', type=str)
@@ -60,7 +60,6 @@ parser.add_argument("--is_eval", action='store_true')
 parser.add_argument('--load_model', default=None,  type=str)
 parser.add_argument('--checkpoint_dir', type=str, default='checkpoint')
 parser.add_argument('--data_name', default=None, type=str)
-parser.add_argument('--shared_embedding', default=None, type=bool)
 
 # Get the arguments
 args = parser.parse_args()
@@ -153,8 +152,6 @@ def main():
 
 	window_size = args.window_size
 
-	shared_embedding = args.shared_embedding
-
 	if embedding_dim == -1:
 		print("embedding dim not -1", embedding_dim)
 		raise AssertionError()
@@ -169,12 +166,9 @@ def main():
 
 	data_name = args.data_name
 
-	print("*"*10)
 	observed_threshold = args.test_observed
-	print("train load")
+
 	train_data = dataset.Dataset(train_data, data_name, observed_threshold, window_size)
-	print("+"*10)
-	print("valid load")
 	valid_data = dataset.Dataset(valid_data, data_name, observed_threshold, window_size, itemmap=train_data.m_itemmap)
 	test_data = dataset.Dataset(test_data, data_name, observed_threshold, window_size)
 
@@ -196,13 +190,14 @@ def main():
 	print("input_size", input_size)
 
 	train_data_loader = dataset.DataLoader(train_data, batch_size)
-	
 	valid_data_loader = dataset.DataLoader(valid_data, batch_size)
 
 	# params_dataloader = {"batch_size":64, "shuffle": True, "num_workers":6}
 
 	# train_data_loader = data.DataLoader(train_data, **params_dataloader)
 	# valid_data_loader = data.DataLoader(valid_data, **params_dataloader)
+	shared_embedding = args.shared_embedding
+	
 
 	if not args.is_eval:
 		model = GRU4REC(window_size, input_size, hidden_size, output_size,
@@ -212,8 +207,8 @@ def main():
 							batch_size=batch_size,
 							dropout_input=dropout_input,
 							dropout_hidden=dropout_hidden,
-							embedding_dim=embedding_dim, 
-							shared_embedding=shared_embedding
+							shared_embedding=shared_embedding,
+							embedding_dim=embedding_dim
 							)
 
 		# init weight

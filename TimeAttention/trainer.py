@@ -36,18 +36,18 @@ class Trainer(object):
             print("Test  Epoch: {}, loss: {:.4f}, recall: {:.4f}, mrr: {:.4f}, time: {}".format(epoch, loss, recall, mrr, time.time() - st))
 
 #             print('embedding', self.model.out_matrix.data[1])
-            checkpoint = {
-                'model': self.model.state_dict(),
-                'args': self.args,
-                'epoch': epoch,
-                'optim': self.optim,
-                'loss': loss,
-                'recall': recall,
-                'mrr': mrr
-            }
-            model_name = os.path.join(self.args.checkpoint_dir, "model_{0:05d}.pt".format(epoch))
-            torch.save(checkpoint, model_name)
-            print("Save model as %s" % model_name)
+#             checkpoint = {
+#                 'model': self.model.state_dict(),
+#                 'args': self.args,
+#                 'epoch': epoch,
+#                 'optim': self.optim,
+#                 'loss': loss,
+#                 'recall': recall,
+#                 'mrr': mrr
+#             }
+#             model_name = os.path.join(self.args.checkpoint_dir, "model_{0:05d}.pt".format(epoch))
+#             torch.save(checkpoint, model_name)
+#             print("Save model as %s" % model_name)
 
     def train_epoch(self, epoch, batch_size):
         self.model.train()
@@ -96,7 +96,7 @@ class Trainer(object):
          
 #         writer.close()      
             
-        print(list(self.model.parameters()) )
+#         print(list(self.model.parameters()) )
         print('beta:', self.model.beta.data, self.model.beta.grad)
         print('gamma:', self.model.gamma.data, self.model.gamma.grad)
         
