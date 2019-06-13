@@ -21,6 +21,9 @@ class Dataset(object):
 		if data_name == "xing":
 			item_sess_arr = data_sess_arr
 
+		if data_name == "taobao":
+			item_sess_arr = data_sess_arr
+
 		sess_num = len(item_sess_arr)
 		print("session num", sess_num)
 
@@ -132,15 +135,16 @@ class DataLoader():
 			minlen = (end-start).min()
 
 			for i in range(minlen-1):
-				idx_input_sample = item_arr[start+i]
-				idx_target_sample = item_arr[start+i+1]
-				
-				idx_input = idx_input_sample
+				x_input_sample = item_arr[start+i]
+				y_target_sample = item_arr[start+i+1]
+				idx_sample = start+i+1
 
-				idx_target = idx_target_sample
+				x_input = x_input_sample
+				y_target = y_target_sample
 
-				input_tensor = torch.LongTensor(idx_input)
-				target_tensor = torch.LongTensor(idx_target)
+				input_tensor = torch.LongTensor(x_input)
+				target_tensor = torch.LongTensor(y_target)
+				idx_tensor = torch.LongTensor(idx_sample)
 
 				total_action_num += self.m_batch_size
 				
@@ -148,7 +152,7 @@ class DataLoader():
 					mask_sess_arr = []
 
 				# print("mask_sess_arr", mask_sess_arr)
-				yield input_tensor, target_tensor, mask_sess_arr
+				yield input_tensor, target_tensor, mask_sess_arr, idx_tensor
 				# if self.m_onehot_flag:
 				#     self.m_onehot_buffer.zero_()
 

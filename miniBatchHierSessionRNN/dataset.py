@@ -24,6 +24,10 @@ class Dataset(object):
 			total_action_pickle = data_sess_arr['item']
 			total_time_pickle = data_sess_arr['time']
 
+		if data_name == "taobao":
+			total_action_pickle = data_sess_arr['item']
+			total_time_pickle = data_sess_arr['time']
+
 		user_num = len(total_action_pickle)
 		print("user num", user_num)
 		
@@ -62,6 +66,7 @@ class Dataset(object):
 			if item not in itemmap:
 				itemmap[item] = item_id
 
+			user_action_list = np.array(user_action_list)
 			user_action_list = user_action_list.tolist()
 			# action_arr += user_action_list
 
@@ -216,11 +221,13 @@ class DataLoader():
 			user_min_len = int((user_end-user_start).min())
 
 			for i in range(user_min_len-1):
-				idx_input = action_arr[user_start+i]
-				idx_target = action_arr[user_start+i+1]
+				x_input = action_arr[user_start+i]
+				y_target = action_arr[user_start+i+1]
+				idx_sample = user_start+i+1
 
-				input_tensor = torch.LongTensor(idx_input)
-				target_tensor = torch.LongTensor(idx_target)
+				input_tensor = torch.LongTensor(x_input)
+				target_tensor = torch.LongTensor(y_target)
+				idx_tensor = torch.LongTensor(idx_sample)
 
 				if i > 0:
 					mask_user_arr_start = []
@@ -236,7 +243,7 @@ class DataLoader():
 
 						sess_end[mask_sess] = action_offsets[sess_iters[mask_sess]+1]
 	
-				yield input_tensor, target_tensor, mask_sess_arr_start, mask_user_arr_start, start_user_mask
+				yield input_tensor, target_tensor, mask_sess_arr_start, mask_user_arr_start, start_user_mask, idx_tensor
 			
 			user_start = user_start + user_min_len - 1
 			mask_user_arr_start = np.arange(self.m_batch_size)[(user_end-user_start) <= 1]
@@ -254,56 +261,4 @@ class DataLoader():
 				# sess_start[mask_user] = action_offsets[sess_iters[mask_user]]
 				sess_end[mask_user] = action_offsets[sess_iters[mask_user]+1]
 
-		# while not finished:
-			
-		# 	sess_min_len = int((sess_end-sess_start).min())
-			
-		# 	for i in range(sess_min_len-1):
-		# 		idx_input = action_arr[sess_start+i]
-		# 		idx_target = action_arr[sess_start+i+1]
-
-		# 		input_tensor = torch.LongTensor(idx_input)
-		# 		target_tensor = torch.LongTensor(idx_target)
-
-		# 		if i > 0:
-		# 			mask_sess_arr_start = []
-		# 			mask_user_arr_start = []
-
-		# 		yield input_tensor, target_tensor, mask_sess_arr_start, mask_user_arr_start, start_user_mask
-
-		# 	sess_start = sess_start + sess_min_len - 1
-
-		# 	# print("sess start", sess_start)
-		# 	# print("sess end", sess_end)
-		# 	mask_sess_arr_start = np.arange(self.m_batch_size)[(sess_end-sess_start) <= 1]
-		# 	# print("mask sess arr", mask_sess_arr)
-		# 	for mask_sess in mask_sess_arr_start:
-		# 		sess_iters[mask_sess] += 1
-		# 		# max_sess_iter = max_sess_iter+1
-		# 		if sess_iters[mask_sess] >= sess_num:
-		# 			finished = True
-
-		# 			break
-
-		# 		sess_start[mask_sess] = action_offsets[sess_iters[mask_sess]]
-		# 		sess_end[mask_sess] = action_offsets[sess_iters[mask_sess]+1]
-
-		# 	mask_user_arr_start = np.arange(self.m_batch_size)[(user_end-sess_start) <= 1]
-
-		# 	start_user_mask = np.ones(self.m_batch_size)
-
-		# 	for mask_user in mask_user_arr_start:
-				
-		# 		max_user_iter = max_user_iter + 1
-		# 		if max_user_iter >= user_num:
-		# 			finished = True
-		# 			break
-				
-		# 		user_start[mask_user] = action_user_offsets[max_user_iter]
-		# 		user_end[mask_user] = action_user_offsets[max_user_iter+1]
-				
-		# 		sess_iters[mask_user] = sess_offsets[max_user_iter]
-		# 		sess_start[mask_user] = action_offsets[sess_iters[mask_user]]
-		# 		sess_end[mask_user] = action_offsets[sess_iters[mask_user]+1]
-
-		# 		start_user_mask[mask_user] = 0
+	

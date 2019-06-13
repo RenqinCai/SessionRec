@@ -9,6 +9,7 @@ from loss import *
 from model import *
 from optimizer import *
 from trainer import *
+# from datetime import datetime
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--hidden_size', default=50, type=int)
@@ -31,6 +32,8 @@ parser.add_argument("-sigma", type=float, default=None,
 					 help="init weight -1: range [-sigma, sigma], -2: range [0, sigma]")
 parser.add_argument("--embedding_dim", type=int, default=-1,
 					 help="using embedding")
+parser.add_argument('--shared_embedding', default=None, type=bool)
+
 # parse the loss type
 parser.add_argument('--loss_type', default='TOP1', type=str)
 # parser.add_argument('--loss_type', default='BPR', type=str)
@@ -50,6 +53,7 @@ parser.add_argument("--is_eval", action='store_true')
 parser.add_argument('--load_model', default=None,  type=str)
 parser.add_argument('--checkpoint_dir', type=str, default='checkpoint')
 parser.add_argument('--data_name', default=None, type=str)
+parser.add_argument('--warm_start', default=5, type=int)
 
 # Get the arguments
 args = parser.parse_args()
@@ -99,6 +103,14 @@ def count_parameters(model):
 	print("parameter_num", parameter_num) 
 
 def main():
+	myhost = os.uname()[1]
+	file_time = datetime.datetime.now().strftime('%H_%M_%d_%m')
+
+	output_file = myhost+"_"+file_time
+	
+	output_file = output_file +"_"+ str(args.hidden_size)+"_"+str(args.batch_size)+"_"+str(args.embedding_dim)+"_"+str(args.optimizer_type)+"_"+str(args.lr)+"_"+"_"+str(args.shared_embedding)
+	output_file = output_file+"_"+str(args.data_name)
+	output_f = open(output_file, "w")
 
 	train_data = args.data_folder+args.train_data
 	valid_data = args.data_folder+args.valid_data
@@ -107,6 +119,11 @@ def main():
 	print("Loading train data from {}".format(train_data))
 	print("Loading valid data from {}".format(valid_data))
 	print("Loading test data from {}\n".format(test_data))
+
+	output_f.write("Loading train data from {}".format(train_data))
+	output_f.write("Loading valid data from {}".format(valid_data))
+	output_f.write("Loading test data from {}".format(test_data))
+	output_f.flush()
 
 	data_name = args.data_name
 
@@ -143,10 +160,6 @@ def main():
 	n_epochs = args.n_epochs
 	time_sort = args.time_sort
 
-	print("loading train data from {}".format(args.train_data))
-	print("loading valid data from {}".format(args.valid_data))
-	print("loading test data from {}".format(args.test_data))
-	
 	train_data_loader = dataset.DataLoader(train_data, BPTT, batch_size)
 	BPTT_valid = 1
 	valid_data_loader = dataset.DataLoader(valid_data, BPTT_valid, batch_size)
@@ -187,7 +200,8 @@ def main():
 							  topk = args.topk,
 							  args=args)
 
-		trainer.train(0, n_epochs - 1, batch_size)
+		trainer.train(0, n_epochs - 1, batch_size, output_f)
+		output_f.close()
 	else:
 		if args.load_model is not None:
 			print("Loading pre trained model from {}".format(args.load_model))

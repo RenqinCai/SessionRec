@@ -1,0 +1,1 @@
+CUDA_VISIBLE_DEVICES=1 python main.py --data_folder ../Data/tmall/100000/ --train_data train_normalized_data.pickle --valid_data test_normalized_data.pickle --test_data test_normalized_data.pickle --data_name taobao --hidden_size 300 --lr 0.0001 --embedding_dim 300 --optimizer_type Adam --batch_size 100
