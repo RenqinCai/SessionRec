@@ -17,7 +17,6 @@ class GRU4REC(nn.Module):
         self.window_size = window_size
         self.device = torch.device('cuda' if use_cuda else 'cpu')
 
-        
         self.h2o = nn.Linear(hidden_size, output_size)
             
         self.create_final_activation(final_act)
@@ -124,4 +123,7 @@ class GRU4REC(nn.Module):
         Initialize the hidden state of the GRU
         '''
         h0 = torch.zeros(self.num_layers, self.batch_size, self.hidden_size).to(self.device)
+<<<<<<< HEAD
 
+=======
+>>>>>>> b236906fc0a0d416a6ee7e952fdf21c03bee8b8e

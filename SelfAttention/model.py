@@ -67,7 +67,7 @@ class TTransformer(nn.Module):
         
     def forward(self, q, k, v, t, mask):
         attn_output, attn_output_weights = self.attn(q, k, v, key_padding_mask=mask)
-        q = q + attn_output
+        q = q + attn_output 
         q = self.norm_1(q)
         q = q + self.ff(q)
         q = self.norm_2(q)  
@@ -103,7 +103,7 @@ class SATT(nn.Module):
             x = layer(x, x, x, src_mask) ### encoded input sequence
         
         trg = self.embed(src[:, -1]).unsqueeze(0)  ### last input
-        d_output = self.decode(trg, x, x, src_mask)
+        d_output = self.decode(trg, x, x, src_mask)  / (1-src_mask.float()).sum()
 #         d_output, _ = self.attn(trg, x, x, src_mask)
     
         output = F.linear(d_output.squeeze(0), self.out_matrix)

@@ -59,7 +59,7 @@ class Transformer(nn.Module):
 
 # temporal-attention model with mask
 class TATT(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size, num_layers=1, num_heads=1, use_cuda=True, batch_size=50, dropout_input=0, dropout_hidden=0.5, embedding_dim=-1, position_embedding=False, shared_embeding=True):
+    def __init__(self, input_size, hidden_size, output_size, num_layers=1, num_heads=1, use_cuda=True, batch_size=50, dropout_input=0, dropout_hidden=0.5, embedding_dim=-1, position_embedding=False, shared_embedding=True):
         super().__init__()
         
         self.device = torch.device('cuda' if use_cuda else 'cpu')
@@ -68,13 +68,18 @@ class TATT(nn.Module):
         self.pe = PositionalEncoder(hidden_size, max_seq_len=30) if position_embedding else None
         self.encode_layers = nn.ModuleList([Transformer(hidden_size, num_heads, dropout=dropout_hidden) for i in range(num_layers)])
         self.attn = nn.MultiheadAttention(hidden_size, num_heads, dropout=dropout_hidden)
-        if shared_embeding:
+        if shared_embedding:
             self.out_matrix = self.embed.weight.to(self.device)
         else:
             self.out_matrix = torch.rand(hidden_size, output_size, requires_grad=True).to(self.device)
         
-        self.beta = torch.ones(1, requires_grad=True, device=self.device)
-        self.gamma = torch.ones(1, requires_grad=True, device=self.device)
+
+
+        self.beta = nn.Parameter(torch.ones(1, requires_grad=True, device=self.device))
+        self.gamma = nn.Parameter(torch.ones(1, requires_grad=True, device=self.device))
+#         self.beta = torch.ones(1, requires_grad=True, device=self.device)
+#         self.gamma = torch.ones(1, requires_grad=True, device=self.device)
+        
 #         self.register_buffer('beta', torch.ones(1, requires_grad=True, device=self.device) )
 #         self.register_buffer('gamma', torch.ones(1, requires_grad=True, device=self.device) )
 #         self.register_buffer('alpha' )

@@ -1,0 +1,3 @@
+# CUDA_VISIBLE_DEVICES=2 python main.py --data_folder ../Data/xing/filterShortDupl/ --train_data train_data.pickle --valid_data test_data.pickle --test_data test_data.pickle --data_name xing --hidden_size 300 --lr 0.0001 --embedding_dim 300 --optimizer_type Adam
+
+CUDA_VISIBLE_DEVICES=2 python main.py --data_folder ../Data/xing/filterShortDupl/ --train_data train_data.pickle --valid_data test_data.pickle --test_data test_data.pickle --data_name xing --hidden_size 300 --lr 0.01 --embedding_dim 300 --optimizer_type Adagrad --n_epochs 100
