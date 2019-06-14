@@ -45,7 +45,7 @@ parser.add_argument('--topk', default=5, type=int)
 parser.add_argument('--warm_start', default=5, type=int)
 # etc
 parser.add_argument('--bptt', default=1, type=int)
-parser.add_argument('--test_observed', default=5, type=int)
+parser.add_argument('--test_observed', default=1, type=int)
 parser.add_argument('--window_size', default=30, type=int)
 parser.add_argument('--shared_embedding', default=1, type=int)
 parser.add_argument('--n_epochs', default=20, type=int)
@@ -53,9 +53,9 @@ parser.add_argument('--time_sort', default=False, type=bool)
 parser.add_argument('--model_name', default='GRU4REC', type=str)
 parser.add_argument('--save_dir', default='models', type=str)
 parser.add_argument('--data_folder', default='../Data/movielen/1m/', type=str)
-parser.add_argument('--train_data', default='train_item.pickle', type=str)
-parser.add_argument('--valid_data', default='test_item.pickle', type=str)
-parser.add_argument('--test_data', default='test_item.pickle', type=str)
+parser.add_argument('--train_data', default='train', type=str)
+parser.add_argument('--valid_data', default='valid', type=str)
+parser.add_argument('--test_data', default='test', type=str)
 parser.add_argument("--is_eval", action='store_true')
 parser.add_argument('--load_model', default=None,  type=str)
 parser.add_argument('--checkpoint_dir', type=str, default='checkpoint')
@@ -131,126 +131,116 @@ def save_data2pickle(data, data_dir, data_flag):
 		f.close()
 
 def main():
-	hidden_size = args.hidden_size
-	num_layers = args.num_layers
-	batch_size = args.batch_size
-	dropout_input = args.dropout_input
-	dropout_hidden = args.dropout_hidden
-	embedding_dim = args.embedding_dim
-	final_act = args.final_act
-	loss_type = args.loss_type
-	topk = args.topk
-	optimizer_type = args.optimizer_type
-	lr = args.lr
-	weight_decay = args.weight_decay
-	momentum = args.momentum
-	eps = args.eps
-	BPTT = args.bptt
+    hidden_size = args.hidden_size
+    num_layers = args.num_layers
+    batch_size = args.batch_size
+    dropout_input = args.dropout_input
+    dropout_hidden = args.dropout_hidden
+    embedding_dim = args.embedding_dim
+    final_act = args.final_act
+    loss_type = args.loss_type
+    topk = args.topk
+    optimizer_type = args.optimizer_type
+    lr = args.lr
+    weight_decay = args.weight_decay
+    momentum = args.momentum
+    eps = args.eps
+    BPTT = args.bptt
 
-	n_epochs = args.n_epochs
-	time_sort = args.time_sort
+    n_epochs = args.n_epochs
+    time_sort = args.time_sort
 
-	window_size = args.window_size
+    window_size = args.window_size
 
-	if embedding_dim == -1:
-		print("embedding dim not -1", embedding_dim)
-		raise AssertionError()
+    if embedding_dim == -1:
+        print("embedding dim not -1", embedding_dim)
+        raise AssertionError()
 
-	train_data = args.data_folder+args.train_data
-	valid_data = args.data_folder+args.valid_data
-	test_data = args.data_folder+args.valid_data
+    train_data = args.data_folder+args.train_data
+    valid_data = args.data_folder+args.valid_data
+    test_data = args.data_folder+args.valid_data
 
-	print("Loading train data from {}".format(train_data))
-	print("Loading valid data from {}".format(valid_data))
-	print("Loading test data from {}\n".format(test_data))
+    print("Loading train data from {}".format(train_data))
+    print("Loading valid data from {}".format(valid_data))
+    print("Loading test data from {}\n".format(test_data))
 
-	data_name = args.data_name
+    data_name = args.data_name
 
-	observed_threshold = args.test_observed
+    observed_threshold = args.test_observed
 
-	train_data = dataset.Dataset(train_data, data_name, observed_threshold, window_size)
-	valid_data = dataset.Dataset(valid_data, data_name, observed_threshold, window_size, itemmap=train_data.m_itemmap)
-	test_data = dataset.Dataset(test_data, data_name, observed_threshold, window_size)
+    train_data = Dataset(train_data, data_name, observed_threshold, window_size, '_item.pickle', '_time.pickle')
+    valid_data = Dataset(valid_data, data_name, observed_threshold, window_size, '_item.pickle', '_time.pickle')
+    test_data = Dataset(test_data, data_name, observed_threshold, window_size, '_item.pickle','_time.pickle')
+   
+    if not args.is_eval:
+        make_checkpoint_dir()
 
-	# debug_train_data_name = args.data_folder+"train_"+args.data_name+"_"+str(args.window_size)
-	# debug_valid_data_name = args.data_folder+"valid_"+args.data_name+"_"+str(args.window_size)
-	# debug_test_data_name = args.data_folder+"test_"+args.data_name+"_"+str(args.window_size)
-	
-	# save_data2pickle(train_data, debug_train_data_name, "train")
-	# save_data2pickle(valid_data, debug_valid_data_name, "valid")
-	# save_data2pickle(test_data, debug_test_data_name, "test")
+    input_size = len(train_data.items)
+    output_size = input_size
+    print("input_size", input_size)
 
-	# exit()
+    train_data_loader = dataset.DataLoader(train_data, batch_size)
+    valid_data_loader = dataset.DataLoader(valid_data, batch_size)
 
-	if not args.is_eval:
-		make_checkpoint_dir()
+    # params_dataloader = {"batch_size":64, "shuffle": True, "num_workers":6}
 
-	input_size = len(train_data.items)
-	output_size = input_size
-	print("input_size", input_size)
+    # train_data_loader = data.DataLoader(train_data, **params_dataloader)
+    # valid_data_loader = data.DataLoader(valid_data, **params_dataloader)
+    shared_embedding = args.shared_embedding
 
-	train_data_loader = dataset.DataLoader(train_data, batch_size)
-	valid_data_loader = dataset.DataLoader(valid_data, batch_size)
 
-	# params_dataloader = {"batch_size":64, "shuffle": True, "num_workers":6}
+    if not args.is_eval:
+        model = GRU4REC(window_size, input_size, hidden_size, output_size,
+                            final_act=final_act,
+                            num_layers=num_layers,
+                            use_cuda=args.cuda,
+                            batch_size=batch_size,
+                            dropout_input=dropout_input,
+                            dropout_hidden=dropout_hidden,
+                            shared_embedding=shared_embedding,
+                            embedding_dim=embedding_dim
+                            )
 
-	# train_data_loader = data.DataLoader(train_data, **params_dataloader)
-	# valid_data_loader = data.DataLoader(valid_data, **params_dataloader)
-	shared_embedding = args.shared_embedding
-	
+        # init weight
+        # See Balazs Hihasi(ICLR 2016), pg.7
 
-	if not args.is_eval:
-		model = GRU4REC(window_size, input_size, hidden_size, output_size,
-							final_act=final_act,
-							num_layers=num_layers,
-							use_cuda=args.cuda,
-							batch_size=batch_size,
-							dropout_input=dropout_input,
-							dropout_hidden=dropout_hidden,
-							shared_embedding=shared_embedding,
-							embedding_dim=embedding_dim
-							)
+        count_parameters(model)
 
-		# init weight
-		# See Balazs Hihasi(ICLR 2016), pg.7
-		
-		count_parameters(model)
+        init_model(model)
 
-		init_model(model)
+        optimizer = Optimizer(model.parameters(),
+                                  optimizer_type=optimizer_type,
+                                  lr=lr,
+                                  weight_decay=weight_decay,
+                                  momentum=momentum,
+                                  eps=eps)
 
-		optimizer = Optimizer(model.parameters(),
-								  optimizer_type=optimizer_type,
-								  lr=lr,
-								  weight_decay=weight_decay,
-								  momentum=momentum,
-								  eps=eps)
+        loss_function = LossFunction(loss_type=loss_type, use_cuda=args.cuda)
 
-		loss_function = LossFunction(loss_type=loss_type, use_cuda=args.cuda)
+        trainer = Trainer(model,
+                              train_data=train_data_loader,
+                              eval_data=valid_data_loader,
+                              optim=optimizer,
+                              use_cuda=args.cuda,
+                              loss_func=loss_function,
+                              topk = args.topk,
+                              args=args)
 
-		trainer = Trainer(model,
-							  train_data=train_data_loader,
-							  eval_data=valid_data_loader,
-							  optim=optimizer,
-							  use_cuda=args.cuda,
-							  loss_func=loss_function,
-							  topk = args.topk,
-							  args=args)
-
-		trainer.train(0, n_epochs - 1, batch_size)
-	else:
-		if args.load_model is not None:
-			print("Loading pre trained model from {}".format(args.load_model))
-			checkpoint = torch.load(args.load_model)
-			model = checkpoint["model"]
-			model.gru.flatten_parameters()
-			optim = checkpoint["optim"]
-			loss_function = LossFunction(loss_type=loss_type, use_cuda=args.cuda)
-			evaluation = Evaluation(model, loss_function, use_cuda=args.cuda)
-			loss, recall, mrr = evaluation.eval(valid_data)
-			print("Final result: recall = {:.2f}, mrr = {:.2f}".format(recall, mrr))
-		else:
-			print("Pre trained model is None!")
+        trainer.train(0, n_epochs - 1, batch_size)
+    else:
+        if args.load_model is not None:
+            print("Loading pre trained model from {}".format(args.load_model))
+            checkpoint = torch.load(args.load_model)
+            model = checkpoint["model"]
+            model.gru.flatten_parameters()
+            optim = checkpoint["optim"]
+            loss_function = LossFunction(loss_type=loss_type, use_cuda=args.cuda)
+            evaluation = Evaluation(model, loss_function, use_cuda=args.cuda)
+            loss, recall, mrr = evaluation.eval(valid_data)
+            print("Final result: recall = {:.2f}, mrr = {:.2f}".format(recall, mrr))
+        else:
+            print("Pre trained model is None!")
 
 
 if __name__ == '__main__':
-	main()
+    main()
