@@ -33,8 +33,10 @@ class GRU4REC(nn.Module):
 #             self.gru = nn.GRU(self.input_size, self.hidden_size, self.num_layers, dropout=self.dropout_hidden)
             
         if shared_embedding:
+            print("share embedding")
             self.out_matrix = self.look_up.weight.to(self.device)
         else:
+            print("separate embedding")
             self.out_matrix = torch.rand(output_size, hidden_size, requires_grad=True).to(self.device)
             
         self = self.to(self.device)
@@ -124,3 +126,4 @@ class GRU4REC(nn.Module):
         Initialize the hidden state of the GRU
         '''
         h0 = torch.zeros(self.num_layers, self.batch_size, self.hidden_size).to(self.device)
+        return h0

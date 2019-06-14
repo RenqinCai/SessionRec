@@ -16,6 +16,7 @@ from optimizer import *
 from trainer import *
 from torch.utils import data
 import pickle
+import sys
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--hidden_size', default=50, type=int)
@@ -60,7 +61,7 @@ parser.add_argument("--is_eval", action='store_true')
 parser.add_argument('--load_model', default=None,  type=str)
 parser.add_argument('--checkpoint_dir', type=str, default='checkpoint')
 parser.add_argument('--data_name', default=None, type=str)
-parser.add_argument('--shared_embedding', default=None, type=bool)
+parser.add_argument('--shared_embedding', default=None, type=int)
 
 # Get the arguments
 args = parser.parse_args()
@@ -154,6 +155,7 @@ def main():
 	window_size = args.window_size
 
 	shared_embedding = args.shared_embedding
+	print("shared_embedding", str(shared_embedding))
 
 	if embedding_dim == -1:
 		print("embedding dim not -1", embedding_dim)
@@ -203,6 +205,13 @@ def main():
 
 	# train_data_loader = data.DataLoader(train_data, **params_dataloader)
 	# valid_data_loader = data.DataLoader(valid_data, **params_dataloader)
+	myhost = os.uname()[1]
+	file_time = datetime.datetime.now().strftime('%H_%M_%d_%m')
+
+	output_file = myhost+"_"+file_time
+	output_file = output_file+"_"+str(hidden_size)+"_"+str(batch_size)+"_"+str(embedding_dim)+"_"+str(optimizer_type)+"_"+str(lr)+"_"+str(window_size)+"_"+str(shared_embedding)
+	output_file = output_file+"_"+str(data_name)
+	output_f = open(output_file, "w")
 
 	if not args.is_eval:
 		model = GRU4REC(window_size, input_size, hidden_size, output_size,
@@ -241,7 +250,8 @@ def main():
 							  topk = args.topk,
 							  args=args)
 
-		trainer.train(0, n_epochs - 1, batch_size)
+		trainer.train(0, n_epochs - 1, batch_size, output_f)
+		output_f.close()
 	else:
 		if args.load_model is not None:
 			print("Loading pre trained model from {}".format(args.load_model))

@@ -4,6 +4,7 @@ import torch
 
 import pickle
 import random
+# import sys
 
 class Dataset(object):
 
@@ -84,22 +85,24 @@ class Dataset(object):
 					continue
 
 				if action_index <= window_size:
-					input_sub_seq = action_seq_arr[:action_index-1]
-					# if itemmap is None:
+					# input_sub_seq = action_seq_arr[:action_index-1]
+					input_sub_seq = action_seq_arr[:action_index]
+					if itemmap is None:
 					
-					# 	random.shuffle(input_sub_seq)
+						random.shuffle(input_sub_seq)
 					
-					input_sub_seq.append(action_seq_arr[action_index-1])
+					# input_sub_seq.append(action_seq_arr[action_index-1])
 					target_sub_seq = action_seq_arr[action_index]
 					self.m_input_action_seq_list.append(input_sub_seq)
 					self.m_target_action_seq_list.append(target_sub_seq)
 					self.m_input_seq_idx_list.append(action_index)
 
 				if action_index > window_size:
-					input_sub_seq = action_seq_arr[action_index-window_size:action_index-1]
-					# if itemmap is None:
-					# 	random.shuffle(input_sub_seq)
-					input_sub_seq.append(action_seq_arr[action_index-1])
+					input_sub_seq = action_seq_arr[action_index-window_size:action_index]
+					# input_sub_seq = action_seq_arr[action_index-window_size:action_index-1]
+					if itemmap is None:
+						random.shuffle(input_sub_seq)
+					# input_sub_seq.append(action_seq_arr[action_index-1])
 					target_sub_seq = action_seq_arr[action_index]
 					self.m_input_action_seq_list.append(input_sub_seq)
 					self.m_target_action_seq_list.append(target_sub_seq)
