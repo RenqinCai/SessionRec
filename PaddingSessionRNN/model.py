@@ -123,7 +123,3 @@ class GRU4REC(nn.Module):
         Initialize the hidden state of the GRU
         '''
         h0 = torch.zeros(self.num_layers, self.batch_size, self.hidden_size).to(self.device)
-<<<<<<< HEAD
-
-=======
->>>>>>> b236906fc0a0d416a6ee7e952fdf21c03bee8b8e
