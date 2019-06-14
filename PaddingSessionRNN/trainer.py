@@ -106,4 +106,4 @@ class Trainer(object):
         #     loss.backward()
         #     self.optim.step()
 
-        mean_losses = np.mean(losses)
+        return np.mean(losses)
