@@ -168,7 +168,7 @@ class DataLoader():
 	
 		self.dataset = dataset
 		self.m_batch_size = batch_size
-		self.m_output_size = len(dataset.m_item_map)
+		# self.m_output_size = len(dataset.m_item_map)
 	   
 		self.m_bptt = BPTT        
 
