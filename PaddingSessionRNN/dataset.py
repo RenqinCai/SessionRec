@@ -11,6 +11,8 @@ class Dataset(object):
 	def __init__(self, itemFile, data_name, observed_threshold, window_size, itemmap=None):
 		data_file = open(itemFile, "rb")
 
+		self.m_itemmap = {}
+
 		action_seq_arr_total = None
 		data_seq_arr = pickle.load(data_file)
 
@@ -30,13 +32,6 @@ class Dataset(object):
 		seq_num = len(action_seq_arr_total)
 		print("seq num", seq_num)
 
-		seq_len_list = []
-
-		self.m_itemmap = itemmap
-		if itemmap is None:
-			self.m_itemmap = {}
-		self.m_itemmap['<PAD>'] = 0
-
 		self.m_seq_list = []
 
 		self.m_input_action_seq_list = []
@@ -55,17 +50,11 @@ class Dataset(object):
 			for action_index in range(action_num_seq):
 				item = action_seq_arr[action_index]
 
-				if itemmap is None: 
-					if item not in self.m_itemmap:
-						item_id = len(self.m_itemmap)
-						self.m_itemmap[item] = item_id
-				else:
-					if item not in self.m_itemmap:
-						continue
-				
-				item_id = self.m_itemmap[item]
-				
-				action_seq_list.append(item_id)
+				action_seq_list.append(item)
+
+				if item not in self.m_itemmap:
+					item_id = len(self.m_itemmap)
+					self.m_itemmap[item] = item_id
 
 			self.m_seq_list.append(action_seq_list)
 
@@ -87,9 +76,9 @@ class Dataset(object):
 				if action_index <= window_size:
 					# input_sub_seq = action_seq_arr[:action_index-1]
 					input_sub_seq = action_seq_arr[:action_index]
-					if itemmap is None:
+					# if itemmap is None:
 					
-						random.shuffle(input_sub_seq)
+					# 	random.shuffle(input_sub_seq)
 					
 					# input_sub_seq.append(action_seq_arr[action_index-1])
 					target_sub_seq = action_seq_arr[action_index]
@@ -100,8 +89,8 @@ class Dataset(object):
 				if action_index > window_size:
 					input_sub_seq = action_seq_arr[action_index-window_size:action_index]
 					# input_sub_seq = action_seq_arr[action_index-window_size:action_index-1]
-					if itemmap is None:
-						random.shuffle(input_sub_seq)
+					# if itemmap is None:
+					# 	random.shuffle(input_sub_seq)
 					# input_sub_seq.append(action_seq_arr[action_index-1])
 					target_sub_seq = action_seq_arr[action_index]
 					self.m_input_action_seq_list.append(input_sub_seq)
@@ -126,7 +115,7 @@ class Dataset(object):
 
 	@property
 	def items(self):
-		print("first item", self.m_itemmap['<PAD>'])
+		# print("first item", self.m_itemmap['<PAD>'])
 		return self.m_itemmap
 
 class DataLoader():
@@ -189,7 +178,4 @@ class DataLoader():
 			pad_seq_len_batch[seq_i] = seq_len_i
 			pad_idx_batch[seq_i] = seq_idx
             
-		### map item id back to start from 0
-		# target_action_seq_batch = [target_i-1 for target_i in target_action_seq_batch]
-
 		return pad_input_action_seq_batch, pad_target_action_seq_batch, pad_seq_len_batch, pad_idx_batch
