@@ -60,6 +60,7 @@ parser.add_argument("--is_eval", action='store_true')
 parser.add_argument('--load_model', default=None,  type=str)
 parser.add_argument('--checkpoint_dir', type=str, default='checkpoint')
 parser.add_argument('--data_name', default=None, type=str)
+# parser.add_argument('--item_nums', default=None, type=str)
 
 # Get the arguments
 args = parser.parse_args()
@@ -175,6 +176,18 @@ def main():
     if not args.is_eval:
         make_checkpoint_dir()
 
+    
+#     if args.item_nums is not None:
+#         input_size = args.item_nums
+#     else:
+#         if args.data_name == 'taobao':
+#             input_size = 96446
+#         elif args.data_name == 'xing':
+#             input_size = 19553
+#         else:
+#             exit('no input size specified')
+            
+#     print('=======', len(train_data.items), 0 in train_data.items )
     input_size = len(train_data.items)
     output_size = input_size
     print("input_size", input_size)

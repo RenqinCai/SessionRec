@@ -23,8 +23,7 @@ class Dataset(object):
         self.m_target_action_seq_list = []
         self.m_input_seq_idx_list = []
         
-        m_seq_list = action_seq_arr_total
-
+        self.m_itemmap = set()
         print("loading data")
         for seq_index in range(seq_num):
             action_seq_arr = m_seq_list[seq_index]
@@ -37,7 +36,11 @@ class Dataset(object):
             for action_index in range(1, action_num_seq):
                 if time_seq_arr[action_index]-time_seq_arr[action_index-1] > session_threshold:
                     session_bound.append(action_index)
-
+            
+            for item in action_seq_arr:
+                if item == 0: print(action_seq_arr)
+                self.m_itemmap.add(item)
+                
             idx = 0
             for action_index in range(observed_threshold, action_num_seq):
                 ### increment if it is predicting the next session start + 1
@@ -58,21 +61,20 @@ class Dataset(object):
     def __len__(self):
         return len(self.m_input_action_seq_list)
 
-    def __getitem__(self, index):
-        x = self.m_input_action_seq_list[index]
-        y = self.m_target_action_seq_list[index]
+#     def __getitem__(self, index):
+#         x = self.m_input_action_seq_list[index]
+#         y = self.m_target_action_seq_list[index]
 
-        x = np.array(x)
-        y = np.array(y)
+#         x = np.array(x)
+#         y = np.array(y)
 
-        x_tensor = torch.LongTensor(x)
-        y_tensor = torch.LongTensor(y)
+#         x_tensor = torch.LongTensor(x)
+#         y_tensor = torch.LongTensor(y)
 
-        return x_tensor, y_tensor
+#         return x_tensor, y_tensor
 
     @property
     def items(self):
-        print("first item", self.m_itemmap['<PAD>'])
         return self.m_itemmap
 
 class DataLoader():
