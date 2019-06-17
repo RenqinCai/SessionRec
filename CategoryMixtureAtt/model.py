@@ -65,28 +65,48 @@ class GRU4REC(nn.Module):
 
         input_seq_index_list = [i for i in range(len(input_seqLen_list))]
 
-        zip_batch = sorted(zip(input_seqLen_list, [i for i in range(len(input_seqLen_list))]), reverse=True)
+        # zip_batch = sorted(zip(input_seqLen_list, [i for i in range(len(input_seqLen_list))]), reverse=True)
         pad_input_seq_batch = []
 
-        ### get seq representation from subseq
-        for input_seq_i, (input_seqLen_i, seq_index_i) in enumerate(zip_batch):
-            input_seq_index_list[input_seq_i] = seq_index_i
+        last_seqIndex = 0
+        for input_seq_i in range(input_seq_num):
             pad_input_seq_batch_temp_i = []
-            input_subseqIndex_i = input_subseqIndex_seq[seq_index_i]
-            # pad_input_seq_batch.append(input_ordered_subseq[input_subseqIndex_i])
-            pad_input_seq_batch_temp_i.append(input_ordered_subseq[input_subseqIndex_i])
+            input_seqLen_i = input_seqLen_list[input_seq_i]
+            pad_zeros = torch.zeros((input_seqLen_i, hidden_size)).to(self.device)
+            pad_input_seq_batch_temp_i.append(pad_zeros)
+            # pad_input_seq_batch_temp_i.append(input_ordered_subseq[last_seqIndex: last_seqIndex+input_seqLen_i])
 
-            # # print("pad len", pad_len)
-            if input_seqLen_max-input_seqLen_i > 0:
+            if input_seqLen_i < input_seqLen_max:
                 pad_zeros = torch.zeros((input_seqLen_max-input_seqLen_i, hidden_size)).to(self.device)
                 pad_input_seq_batch_temp_i.append(pad_zeros)
-            # pad_zeros = torch.zeros((input_seqLen_max, hidden_size)).to(self.device)
-            # pad_input_seq_batch_temp_i.append(pad_zeros)
 
             pad_input_seq_batch_temp_i = torch.cat(pad_input_seq_batch_temp_i, dim=0)
             pad_input_seq_batch.append(pad_input_seq_batch_temp_i.unsqueeze(0))
+            last_seqIndex += input_seqLen_i
+        # input_seq_index_list_tmp = []
+        # for input_seq_i, (input_seqLen_i, seq_index_i) in enumerate(zip_batch):
+        #     input_seq_index_list_tmp[seq_index_i] = input_seq_i
+
+        # ### get seq representation from subseq
+        # for input_seq_i, (input_seqLen_i, seq_index_i) in enumerate(zip_batch):
+        #     input_seq_index_list[input_seq_i] = seq_index_i
+        #     pad_input_seq_batch_temp_i = []
+        #     input_subseqIndex_i = input_subseqIndex_seq[seq_index_i]
+        #     print("input_subseqIndex_i", input_subseqIndex_i)
+        #     # pad_input_seq_batch.append(input_ordered_subseq[input_subseqIndex_i])
+        #     pad_input_seq_batch_temp_i.append(input_ordered_subseq[input_subseqIndex_i])
+
+        #     # # print("pad len", pad_len)
+        #     if input_seqLen_max-input_seqLen_i > 0:
+        #         pad_zeros = torch.zeros((input_seqLen_max-input_seqLen_i, hidden_size)).to(self.device)
+        #         pad_input_seq_batch_temp_i.append(pad_zeros)
+        #     # pad_zeros = torch.zeros((input_seqLen_max, hidden_size)).to(self.device)
+        #     # pad_input_seq_batch_temp_i.append(pad_zeros)
+
+        #     pad_input_seq_batch_temp_i = torch.cat(pad_input_seq_batch_temp_i, dim=0)
+        #     pad_input_seq_batch.append(pad_input_seq_batch_temp_i.unsqueeze(0))
            
-            pad_input_seq_len_batch[input_seq_i] = input_seqLen_i
+        #     pad_input_seq_len_batch[input_seq_i] = input_seqLen_i
         
         # pad_input_seq_batch = torch.zeros((input_seq_num, input_seqLen_max, hidden_size)).to(self.device)
         # pad_input_seq_batch = pad_input_seq_batch.transpose(0, 1)
@@ -99,6 +119,7 @@ class GRU4REC(nn.Module):
         # input_seq_index_list = [i for i in range(len(input_seqLen_list))]
         # print("input_seq_index_list", input_seq_index_list)
         # pad_input_seq_len_batch = sorted(np.array(input_seqLen_list), reverse=True)
+        # return pad_input_seq_batch, pad_input_seq_len_batch
 
         return pad_input_seq_batch, pad_input_seq_len_batch, input_seq_index_list
 
@@ -142,10 +163,11 @@ class GRU4REC(nn.Module):
         batch_size = pad_input_seq_batch.size(1)
         hidden_seq = self.init_hidden(batch_size)
 
-        pad_input_seq_batch = torch.nn.utils.rnn.pack_padded_sequence(pad_input_seq_batch, pad_input_seq_len_batch)
+        # pad_input_seq_batch = 
+        # pad_input_seq_batch = torch.nn.utils.rnn.pack_padded_sequence(pad_input_seq_batch, pad_input_seq_len_batch)
 
         output_seq, hidden_seq = self.m_short_gru(pad_input_seq_batch, hidden_seq)
-        output_seq, _ = torch.nn.utils.rnn.pad_packed_sequence(output_seq)
+        # output_seq, _ = torch.nn.utils.rnn.pad_packed_sequence(output_seq)
         output_seq = output_seq.contiguous()
         # print("output_seq size", output_seq.size())
 
