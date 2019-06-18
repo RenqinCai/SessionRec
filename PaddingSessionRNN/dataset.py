@@ -7,7 +7,7 @@ import random
 
 class Dataset(object):
 
-    def __init__(self, data_prefix, data_name, observed_threshold, window_size, itemKey, timeKey, session_threshold=360000):
+    def __init__(self, data_prefix, data_name, observed_threshold, window_size, itemKey, timeKey, session_threshold=36000):
         time_filename = data_prefix + timeKey
         time_seq_arr_total = pickle.load(open(time_filename, "rb"))
         
@@ -38,7 +38,6 @@ class Dataset(object):
                     session_bound.append(action_index)
             
             for item in action_seq_arr:
-                if item == 0: print(action_seq_arr)
                 self.m_itemmap.add(item)
                 
             idx = 0

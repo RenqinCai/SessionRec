@@ -43,6 +43,8 @@ parser.add_argument('--loss_type', default='TOP1', type=str)
 # parser.add_argument('--loss_type', default='BPR', type=str)
 parser.add_argument('--topk', default=5, type=int)
 parser.add_argument('--warm_start', default=5, type=int)
+parser.add_argument('--session_threshold', default=36000, type=int)
+
 # etc
 parser.add_argument('--bptt', default=1, type=int)
 parser.add_argument('--test_observed', default=1, type=int)
@@ -60,7 +62,6 @@ parser.add_argument("--is_eval", action='store_true')
 parser.add_argument('--load_model', default=None,  type=str)
 parser.add_argument('--checkpoint_dir', type=str, default='checkpoint')
 parser.add_argument('--data_name', default=None, type=str)
-# parser.add_argument('--item_nums', default=None, type=str)
 
 # Get the arguments
 args = parser.parse_args()
@@ -169,26 +170,14 @@ def main():
 
     observed_threshold = args.test_observed
 
-    train_data = Dataset(train_data, data_name, observed_threshold, window_size, '_item.pickle', '_time.pickle')
-    valid_data = Dataset(valid_data, data_name, observed_threshold, window_size, '_item.pickle', '_time.pickle')
-    test_data = Dataset(test_data, data_name, observed_threshold, window_size, '_item.pickle','_time.pickle')
+    train_data = Dataset(train_data, data_name, observed_threshold, window_size, '_item.pickle', '_time.pickle', session_threshold=args.session_threshold)
+    valid_data = Dataset(valid_data, data_name, observed_threshold, window_size, '_item.pickle', '_time.pickle', session_threshold=args.session_threshold)
+    test_data = Dataset(test_data, data_name, observed_threshold, window_size, '_item.pickle','_time.pickle', session_threshold=args.session_threshold)
    
     if not args.is_eval:
         make_checkpoint_dir()
 
-    
-#     if args.item_nums is not None:
-#         input_size = args.item_nums
-#     else:
-#         if args.data_name == 'taobao':
-#             input_size = 96446
-#         elif args.data_name == 'xing':
-#             input_size = 19553
-#         else:
-#             exit('no input size specified')
-            
-#     print('=======', len(train_data.items), 0 in train_data.items )
-    input_size = len(train_data.items)
+    input_size = len(train_data.items)+1
     output_size = input_size
     print("input_size", input_size)
 
