@@ -63,10 +63,11 @@ class Trainer(object):
             return hidden
        
         dataloader = self.train_data
-        for x_batch, y_batch, x_subseq_len_batch, x_subseq_index_batch, x_subseqIndex_seq_batch, _ in dataloader:
+        for x_batch, y_batch, _, mask_batch, max_subseqNum, max_acticonNum, subseqLen_batch, seqLen_batch in dataloader:
             st = datetime.datetime.now()
             x_batch = x_batch.to(self.device)
             y_batch = y_batch.to(self.device)
+            mask_batch = mask_batch.to(self.device)
 
             # batch_size = x_batch.size(0)
 
@@ -74,7 +75,7 @@ class Trainer(object):
             # hidden_subseq = self.model.init_hidden(batch_size)
             # hidden_seq = self.model.init_hidden(batch_size)
 
-            logit_batch, hidden_seq, x_seq_index_list = self.model(x_batch, x_subseq_len_batch, x_subseq_index_batch, x_subseqIndex_seq_batch)
+            logit_batch = self.model(x_batch, mask_batch, max_subseqNum, max_acticonNum, subseqLen_batch, seqLen_batch)
 
             # y_batch = y_batch[x_seq_index_list]
             ### batch_size*batch_size
