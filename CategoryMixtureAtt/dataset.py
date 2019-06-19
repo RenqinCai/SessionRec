@@ -87,7 +87,7 @@ class Dataset(object):
 					subseq_num += 1
 					# print("cate action map", cate_action_list_map_user)
 					for cate in cate_action_list_map_user:
-						subseq_cate = cate_action_list_map_user[cate].copy()
+						subseq_cate = cate_action_list_map_user[cate].copy()[:5]
 						actionNum_subseq_cate = len(subseq_cate)
 
 						action_list_sub_seq.append(subseq_cate)
@@ -115,7 +115,7 @@ class Dataset(object):
 					subseq_num += 1
 					# print("cate action map", cate_action_list_map_user)
 					for cate in cate_action_list_map_user:
-						subseq_cate = cate_action_list_map_user[cate].copy()
+						subseq_cate = cate_action_list_map_user[cate].copy()[:5]
 						actionNum_subseq_cate = len(subseq_cate)
 
 						action_list_sub_seq.append(subseq_cate)
@@ -164,7 +164,7 @@ class DataLoader():
 		sort subsequences 
 		"""
 
-		sorted_data = sorted(zip(self.m_dataset.m_input_subseqNum_seq_list, self.m_dataset.m_input_subseq_list_seq_list, self.m_dataset.m_input_subseqLen_list_seq_list, self.m_dataset.m_target_action_seq_list, self.m_dataset.m_input_seq_idx_list))
+		sorted_data = sorted(zip(self.m_dataset.m_input_subseqNum_seq_list, self.m_dataset.m_input_subseq_list_seq_list, self.m_dataset.m_input_subseqLen_list_seq_list, self.m_dataset.m_target_action_seq_list, self.m_dataset.m_input_seq_idx_list), reverse=True)
 
 		# sorted_data = sorted(zip(self.m_dataset.m_input_subseqLen_list_seq_list,self.m_dataset.m_input_subseq_list_seq_list,  self.m_dataset.m_input_subseqNum_seq_list, self.m_dataset.m_target_action_seq_list, self.m_dataset.m_input_seq_idx_list), reverse=True)
 		

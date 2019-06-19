@@ -64,7 +64,7 @@ class Trainer(object):
        
         dataloader = self.train_data
         for x_batch, y_batch, _, mask_batch, max_subseqNum, max_acticonNum, subseqLen_batch, seqLen_batch in dataloader:
-            st = datetime.datetime.now()
+            # st = datetime.datetime.now()
             x_batch = x_batch.to(self.device)
             y_batch = y_batch.to(self.device)
             mask_batch = mask_batch.to(self.device)
@@ -89,8 +89,8 @@ class Trainer(object):
             torch.nn.utils.clip_grad_norm(self.model.parameters(), max_norm)
 
             self.optim.step()
-            et = datetime.datetime.now()
-            print("batch time", et-st)
+            # et = datetime.datetime.now()
+            # print("batch time", et-st)
 
         mean_losses = np.mean(losses)
         return mean_losses

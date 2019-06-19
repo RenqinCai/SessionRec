@@ -212,6 +212,10 @@ def main():
 	output_file = output_file+"_"+str(hidden_size)+"_"+str(batch_size)+"_"+str(embedding_dim)+"_"+str(optimizer_type)+"_"+str(lr)+"_"+str(window_size)+"_"+str(shared_embedding)
 	output_file = output_file+"_"+str(data_name)
 	output_f = open(output_file, "w")
+	
+	# used_cuda_device = torch.device('cuda' if use_cuda else 'cpu')
+
+	# print("there are ", torch.cuda.device_count(), " GPUs")
 
 	if not args.is_eval:
 		model = GRU4REC(window_size, input_size, hidden_size, output_size,
@@ -224,6 +228,7 @@ def main():
 							embedding_dim=embedding_dim, 
 							shared_embedding=shared_embedding
 							)
+		# model = model.to(used_cuda_device)
 
 		# init weight
 		# See Balazs Hihasi(ICLR 2016), pg.7

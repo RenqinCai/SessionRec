@@ -34,7 +34,14 @@ class GRU4REC(nn.Module):
         else:
             print("separate embedding")
             self.out_matrix = torch.rand(output_size, hidden_size, requires_grad=True).to(self.device)
-            
+        
+        # if torch.cuda.device_count() > 1:
+        #     print("there are ", torch.cuda.device_count(), " GPUs")
+
+        #     self = nn.DataParallel(self)
+        # else:
+        #     print("there are ", torch.cuda.device_count(), " GPUs")
+
         self = self.to(self.device)
 
     def create_final_activation(self, final_act):
@@ -213,7 +220,7 @@ class GRU4REC(nn.Module):
         
 #         logit = self.final_activation(output) ## (B, output_size)
         logit = output
-        # logit = torch.ones(1000)
+
         return logit
 
 

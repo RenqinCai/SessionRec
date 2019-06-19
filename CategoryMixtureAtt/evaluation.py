@@ -30,15 +30,17 @@ class Evaluation(object):
 
 		with torch.no_grad():
 			total_test_num = []
-			for x_batch, y_batch, x_subseq_len, x_subseq_index, x_subseqIndex_seq, idx_batch in dataloader:
+
+			for x_batch, y_batch, idx_batch, mask_batch, max_subseqNum, max_acticonNum, subseqLen_batch, seqLen_batch in dataloader:
 				x_batch = x_batch.to(self.device)
 				y_batch = y_batch.to(self.device)
 				warm_start_mask = (idx_batch>=self.warm_start).to(self.device)
+				mask_batch = mask_batch.to(self.device)
                 
 				# hidden = self.model.init_hidden()
 
-				logit_batch, hidden = self.model(x_batch, x_subseq_len, x_subseq_index, x_subseqIndex_seq)
-
+				logit_batch = self.model(x_batch, mask_batch, max_subseqNum, max_acticonNum, subseqLen_batch, seqLen_batch)
+				
 				logit_sampled_batch = logit_batch[:, y_batch.view(-1)]
 				loss_batch = self.loss_func(logit_sampled_batch, y_batch)
 
