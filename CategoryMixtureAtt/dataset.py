@@ -27,11 +27,13 @@ class Dataset(object):
 		### each user's sequence is composed of multiple sub sequences
 		### sub sequence is composed of actions	
 		
-		self.m_input_subseq_list_seq_list = []
-		self.m_input_subseq_cate_list = []
+		self.m_input_seq_list = []
+		self.m_input_seqLen_list = []
+		# self.m_input_subseqNum_seq_list = []
 
-		self.m_input_subseqLen_list_seq_list = []
-		self.m_input_subseqNum_seq_list = []
+		self.m_input_subseq_list_cate_list = []
+		self.m_input_subseqLen_list_cate_list = []
+		self.m_input_subseqNum_seq_cate_list = []
 
 		self.m_target_action_seq_list = []
 		self.m_target_cate_seq_list = []
@@ -81,10 +83,13 @@ class Dataset(object):
 				if action_index <= window_size:
 					subseq = action_seq_arr[:action_index]
 
-					action_list_sub_seq.append(subseq)
-					actionNum_list_sub_seq.append(action_index)
+					# action_list_sub_seq.append(subseq)
+					# actionNum_list_sub_seq.append(action_index)
 					
-					subseq_num += 1
+					self.m_input_seq_list.append(subseq)
+					self.m_input_seqLen_list.append(action_index)
+
+					# subseq_num += 1
 					# print("cate action map", cate_action_list_map_user)
 					for cate in cate_action_list_map_user:
 						subseq_cate = cate_action_list_map_user[cate].copy()[:5]
@@ -95,12 +100,9 @@ class Dataset(object):
 						
 						subseq_num += 1
 
-					# print("++++++++action_list_sub_seq", action_list_sub_seq)
-					self.m_input_subseq_list_seq_list.append(action_list_sub_seq)
-					# print("self.m_input_subseq_list_seq_list")
-					self.m_input_subseqLen_list_seq_list.append(actionNum_list_sub_seq)
-
-					self.m_input_subseqNum_seq_list.append(subseq_num)
+					self.m_input_subseq_list_cate_list.append(action_list_sub_seq)
+					self.m_input_subseqLen_list_cate_list.append(actionNum_list_sub_seq)
+					self.m_input_subseqNum_seq_cate_list.append(subseq_num)
 					
 					target_subseq = action_seq_arr[action_index]
 					self.m_target_action_seq_list.append(target_subseq)
@@ -109,10 +111,12 @@ class Dataset(object):
 
 				if action_index > window_size:
 					subseq = action_seq_arr[action_index-window_size:action_index]
-					action_list_sub_seq.append(subseq)
-					actionNum_list_sub_seq.append(window_size)
-					
-					subseq_num += 1
+					# action_list_sub_seq.append(subseq)
+					# actionNum_list_sub_seq.append(window_size)
+
+					self.m_input_seq_list.append(subseq)
+					self.m_input_seqLen_list.append(window_size)
+
 					# print("cate action map", cate_action_list_map_user)
 					for cate in cate_action_list_map_user:
 						subseq_cate = cate_action_list_map_user[cate].copy()[:5]
@@ -124,11 +128,9 @@ class Dataset(object):
 						subseq_num += 1
 
 					# print("++++++++action_list_sub_seq", action_list_sub_seq)
-					self.m_input_subseq_list_seq_list.append(action_list_sub_seq)
-					# print(self.m_input_subseq_list_seq_list)
-					self.m_input_subseqLen_list_seq_list.append(actionNum_list_sub_seq)
-
-					self.m_input_subseqNum_seq_list.append(subseq_num)
+					self.m_input_subseq_list_cate_list.append(action_list_sub_seq)
+					self.m_input_subseqLen_list_cate_list.append(actionNum_list_sub_seq)
+					self.m_input_subseqNum_seq_cate_list.append(subseq_num)
 
 					target_subseq = action_seq_arr[action_index]
 					self.m_target_action_seq_list.append(target_subseq)
@@ -146,8 +148,8 @@ class Dataset(object):
 				cate_action_list_map_user[cate_cur].append(item_cur)
 
 		# print("debug", self.m_input_subseq_list_seq_list[:10])
-		print("subseq num", len(self.m_input_subseq_list_seq_list))
-		print("subseq len num", len(self.m_input_subseqLen_list_seq_list))
+		print("subseq num", len(self.m_input_seq_list))
+		print("subseq len num", len(self.m_input_seqLen_list))
 		print("seq idx num", len(self.m_input_seq_idx_list))
 
 	@property
@@ -164,23 +166,17 @@ class DataLoader():
 		sort subsequences 
 		"""
 
-		sorted_data = sorted(zip(self.m_dataset.m_input_subseqNum_seq_list, self.m_dataset.m_input_subseq_list_seq_list, self.m_dataset.m_input_subseqLen_list_seq_list, self.m_dataset.m_target_action_seq_list, self.m_dataset.m_input_seq_idx_list), reverse=True)
-
-		# sorted_data = sorted(zip(self.m_dataset.m_input_subseqLen_list_seq_list,self.m_dataset.m_input_subseq_list_seq_list,  self.m_dataset.m_input_subseqNum_seq_list, self.m_dataset.m_target_action_seq_list, self.m_dataset.m_input_seq_idx_list), reverse=True)
+		sorted_data = sorted(zip(self.m_dataset.m_input_subseqNum_seq_cate_list, self.m_dataset.m_input_subseq_list_cate_list, self.m_dataset.m_input_subseqLen_list_cate_list, self.m_dataset.m_input_seq_list, self.m_dataset.m_input_seqLen_list , self.m_dataset.m_target_action_seq_list, self.m_dataset.m_input_seq_idx_list), reverse=True)
 		
-		self.m_dataset.m_input_subseqNum_seq_list, self.m_dataset.m_input_subseq_list_seq_list, self.m_dataset.m_input_subseqLen_list_seq_list,  self.m_dataset.m_target_action_seq_list, self.m_dataset.m_input_seq_idx_list = zip(*sorted_data)
+		self.m_dataset.m_input_subseqNum_seq_cate_list, self.m_dataset.m_input_subseq_list_cate_list, self.m_dataset.m_input_subseqLen_list_cate_list, self.m_dataset.m_input_seq_list, self.m_dataset.m_input_seqLen_list , self.m_dataset.m_target_action_seq_list, self.m_dataset.m_input_seq_idx_list = zip(*sorted_data)
 
 	def __iter__(self):
 		
-		# print("shuffling")
-		# temp = list(zip(self.m_dataset.m_input_subseq_list_seq_list, self.m_dataset.m_input_subseqLen_list_seq_list, self.m_dataset.m_input_subseqNum_seq_list, self.m_dataset.m_target_action_seq_list, self.m_dataset.m_input_seq_idx_list))
-		# random.shuffle(temp)
-		
-		# input_subseq_list_seq_list, input_subseqLen_list_seq_list, input_subseqNum_seq_list, target_action_seq_list, input_seq_idx_list = zip(*temp)
-
-		input_subseqNum_seq_list = self.m_dataset.m_input_subseqNum_seq_list
-		input_subseq_list_seq_list = self.m_dataset.m_input_subseq_list_seq_list
-		input_subseqLen_list_seq_list = self.m_dataset.m_input_subseqLen_list_seq_list
+		input_subseqNum_seq_cate_list = self.m_dataset.m_input_subseqNum_seq_cate_list
+		input_subseq_list_seq_cate_list = self.m_dataset.m_input_subseq_list_cate_list
+		input_subseqLen_list_cate_list = self.m_dataset.m_input_subseqLen_list_cate_list
+		input_seq_list = self.m_dataset.m_input_seq_list
+		input_seqLen_list = self.m_dataset.m_input_seqLen_list
 		target_action_seq_list = self.m_dataset.m_target_action_seq_list
 		input_seq_idx_list = self.m_dataset.m_input_seq_idx_list
 
@@ -188,7 +184,7 @@ class DataLoader():
 
 		batch_size = self.m_batch_size
 		
-		input_seq_num = len(input_subseqNum_seq_list)
+		input_seq_num = len(input_subseqNum_seq_cate_list)
 		batch_num = int(input_seq_num/batch_size)
 
 		print("batch_num", batch_num)
@@ -197,127 +193,117 @@ class DataLoader():
 			
 			# print("batch index", batch_index)
 
-			x_batch = []
+			x_cate_batch = []
+
 			y_batch = []
 
-			# x_actionNum_subseq_batch = []
-			# x_subseq_seq_batch = []
-			# x_subseq_len_batch = []
-			# x_subseq_index_batch = []
-			# x_subseqIndex_seq_batch = []
 			idx_batch = []
 
-			max_subseqNum_batch = 0
-			max_actionNum_batch = 0
+			max_actionNum_cate_batch = 0
+			max_subseqNum_cate_batch = 0
 
-			subseqNum_batch = []
-			actionNum_batch = []
+			subseqNum_cate_batch = []
+			actionNum_cate_batch = []
 			
 			for seq_index_batch in range(batch_size):
 				seq_index = batch_index*batch_size+seq_index_batch
 
-				subseq_list_user = input_subseq_list_seq_list[seq_index]
-				subseqlen_list_user = input_subseqLen_list_seq_list[seq_index]
-				subseqNum_user = input_subseqNum_seq_list[seq_index]
+				subseq_list_cate_user = input_subseq_list_seq_cate_list[seq_index]
+				subseqlen_list_cate_user = input_subseqLen_list_cate_list[seq_index]
+				subseqNum_cate_user = input_subseqNum_seq_cate_list[seq_index]
 
-				subseqNum_batch.append(subseqNum_user)
-				max_actionNum_seq = max(subseqlen_list_user)
+				subseqNum_cate_batch.append(subseqNum_cate_user)
+				max_actionNum_seq_cate = max(subseqlen_list_cate_user)
 
-				actionNum_batch.append(max_actionNum_seq)
+				actionNum_cate_batch.append(max_actionNum_seq_cate)
 
-			max_actionNum_batch = max(actionNum_batch)
-			max_subseqNum_batch = max(subseqNum_batch)
-		
-			mask_batch = None
-			subseqLen_batch = []
-			seqLen_batch = []
+			max_actionNum_cate_batch = max(actionNum_cate_batch)
+			max_subseqNum_cate_batch = max(subseqNum_cate_batch)
+			
+			# print("max_subseqNum_cate_batch", max_subseqNum_cate_batch)
+
+			mask_cate_batch = None
+			subseqLen_cate_batch = []
+			seqLen_cate_batch = []
 			# x_subseq_index_batch = []
 			for seq_index_batch in range(batch_size):
 				seq_index = batch_index*batch_size+seq_index_batch
 
-				subseq_list_user = input_subseq_list_seq_list[seq_index]
+				subseq_list_cate_user = input_subseq_list_seq_cate_list[seq_index]
 
-				pad_subseq_list_user = [subseq + [0]*(max_actionNum_batch-len(subseq)) for subseq in subseq_list_user]
+				pad_subseq_list_cate_user = [subseq + [0]*(max_actionNum_cate_batch-len(subseq)) for subseq in subseq_list_cate_user]
 				# print("pad_subseq_list_user", pad_subseq_list_user)
-				pad_subseq_list_user += [[0]*max_actionNum_batch for i in range(max_subseqNum_batch-len(pad_subseq_list_user))]	
-
+				pad_subseq_list_cate_user += [[0]*max_actionNum_cate_batch for i in range(max_subseqNum_cate_batch-len(pad_subseq_list_cate_user))]	
 				y = target_action_seq_list[seq_index]
 
-				subseqNum_user = input_subseqNum_seq_list[seq_index]
+				subseqNum_cate_user = input_subseqNum_seq_cate_list[seq_index]
 
-				subseqLen_list_user = input_subseqLen_list_seq_list[seq_index]
+				subseqLen_list_cate_user = input_subseqLen_list_cate_list[seq_index]
 			
-				subseqLen_batch += subseqLen_list_user
+				subseqLen_cate_batch += subseqLen_list_cate_user
 			
-				subseqLen_batch += [0]*(max_subseqNum_batch-subseqNum_user)
+				subseqLen_cate_batch += [0]*(max_subseqNum_cate_batch-subseqNum_cate_user)
 
-				seqLen_batch.append(subseqNum_user)
+				seqLen_cate_batch.append(subseqNum_cate_user)
 				
-				x_batch += pad_subseq_list_user
+				x_cate_batch += pad_subseq_list_cate_user
 			
 				y_batch.append(y)
 				idx_batch.append(input_seq_idx_list[seq_index])
 
-				# subseq_index_acc += subseqNum_user
+			subseqLen_cate_batch = np.array(subseqLen_cate_batch)
+			seqLen_cate_batch = np.array(seqLen_cate_batch)
 
-			# print("subseqLen_batch", subseqLen_batch)
+			mask_cate_batch = np.arange(max_actionNum_cate_batch)[None, :] < subseqLen_cate_batch[:, None]
+			
+			x_cate_batch = np.array(x_cate_batch)
 
-			subseqLen_batch = np.array(subseqLen_batch)
+			x_batch = []
+			mask_batch = []
+			seqLen_batch = []
+			
+			for seq_index_batch in range(batch_size):
+				seq_index = batch_index*batch_size+seq_index_batch
+
+				seq_user = input_seq_list[seq_index]
+				seqLen_user = input_seqLen_list[seq_index]
+			
+				seqLen_batch.append(seqLen_user)
+
+			max_seqLen_batch = max(seqLen_batch)
+
+			for seq_index_batch in range(batch_size):
+				seq_index = batch_index*batch_size+seq_index_batch
+
+				seq_user = input_seq_list[seq_index]
+
+				pad_seq_user = seq_user+[0]*(max_seqLen_batch-len(seq_user))
+			
+				x_batch.append(pad_seq_user)
+			
 			seqLen_batch = np.array(seqLen_batch)
-
-			mask_batch = np.arange(max_actionNum_batch)[None, :] < subseqLen_batch[:, None]
-			# print("mask_batch", mask_batch)
-			# print("x_batch", x_batch)
+			# print("seqLen_batch", seqLen_batch)
+			mask_batch = np.arange(max_seqLen_batch)[None,:] < seqLen_batch[:, None]
+			
 			x_batch = np.array(x_batch)
+
 			y_batch = np.array(y_batch)
 			idx_batch = np.array(idx_batch)
-			# x_batch, x_subseq_len_batch, x_subseq_index_batch = self.batchifyData(x_batch)
-
-			# if len(x_subseq_index_batch) != len(x_batch):
-			# 	assert("error batchify subseq")
 
 			x_batch_tensor = torch.from_numpy(x_batch)
+			mask_batch_tensor = torch.from_numpy(mask_batch*1)
+
+			x_cate_batch_tensor = torch.from_numpy(x_cate_batch)
 			y_batch_tensor = torch.from_numpy(y_batch)
-			mask_batch_tensor = torch.from_numpy(mask_batch*1).float()
-			# x_batch_tensor = torch.LongTensor(x_batch)
+			mask_cate_batch_tensor = torch.from_numpy(mask_cate_batch*1).float()
+			# print("x batch size", x_cate_batch_tensor.size())
+			# print("mask batch size", mask_batch_tensor.size())
 
-			# y_batch_tensor = torch.LongTensor(y_batch)
 			idx_batch_tensor = torch.LongTensor(idx_batch)
-			# mask_batch_tensor = torch.LongTensor(mask_batch)
 			
-			yield x_batch_tensor, y_batch_tensor, idx_batch_tensor, mask_batch_tensor, max_subseqNum_batch, max_actionNum_batch, subseqLen_batch, seqLen_batch
+			# print("max_subseqNum_cate_batch", max_subseqNum_cate_batch)
+			# print("max_actionNum_cate_batch", max_actionNum_cate_batch)
 
-	def batchifyData(self, input_action_seq_batch, input_seq_index_batch):
-		seq_len_batch = [len(seq_i) for seq_i in input_action_seq_batch]
-		
-		if seq_len_batch != len(input_action_seq_batch):
-			assert("error batchify 1")
-		
-		if seq_len_batch != len(input_seq_index_batch):
-			assert("error batchify 2")
+			yield x_cate_batch_tensor, mask_cate_batch_tensor, max_actionNum_cate_batch, max_subseqNum_cate_batch, subseqLen_cate_batch, seqLen_cate_batch, x_batch_tensor, mask_batch_tensor, seqLen_batch, y_batch_tensor, idx_batch_tensor
 
-		longest_len_batch = max(seq_len_batch)
-		batch_size = len(input_action_seq_batch)
-
-		pad_input_action_seq_batch = np.zeros((batch_size, longest_len_batch))
-		pad_seq_len_batch = np.zeros(batch_size)
-
-		## key is the original index, value is the sorted index
-		pad_input_seq_index_batch = np.zeros(batch_size)
-
-		zip_batch = sorted(zip(seq_len_batch, input_action_seq_batch, input_seq_index_batch), reverse=True)
-
-		# st = datetime.datetime.now()
-
-		for seq_i, (seq_len_i, input_action_seq_i, input_seq_index_i) in enumerate(zip_batch):
-			pad_input_action_seq_batch[seq_i, 0:seq_len_i] = input_action_seq_i
-			pad_seq_len_batch[seq_i] = seq_len_i
-
-			## this is to recover index of subsequence for next RNN
-			pad_input_seq_index_batch[input_seq_index_i] = seq_i
-		# print("pad_seq_len_batch", pad_seq_len_batch) 
-		
-		# et = datetime.datetime.now()
-		# print("batchify duration", et-st)
-
-		return pad_input_action_seq_batch, pad_seq_len_batch, pad_input_seq_index_batch
+			# yield x_cate_batch_tensor, x_batch_tensor, seqLen_batch, y_batch_tensor, idx_batch_tensor, mask_cate_batch_tensor, mask_batch_tensor, max_subseqNum_cate_batch, max_actionNum_cate_batch, subseqLen_cate_batch, seqLen_cate_batch

@@ -39,18 +39,18 @@ class Trainer(object):
             print("Epoch: {}, loss: {:.4f}, recall: {:.4f}, mrr: {:.4f}, time: {}".format(epoch, loss, recall, mrr, time.time() - st))
             output_f.write("Epoch: {}, loss: {:.4f}, recall: {:.4f}, mrr: {:.4f}, time: {}".format(epoch, loss, recall, mrr, time.time() - st)+"\n")
             output_f.flush()
-#             checkpoint = {
-#                 'model': self.model.state_dict(),
-#                 'args': self.args,
-#                 'epoch': epoch,
-#                 'optim': self.optim,
-#                 'loss': loss,
-#                 'recall': recall,
-#                 'mrr': mrr
-#             }
-#             model_name = os.path.join(self.args.checkpoint_dir, "model_{0:05d}.pt".format(epoch))
-#             torch.save(checkpoint, model_name)
-#             print("Save model as %s" % model_name)
+            checkpoint = {
+                'model': self.model.state_dict(),
+                'args': self.args,
+                'epoch': epoch,
+                'optim': self.optim,
+                'loss': loss,
+                'recall': recall,
+                'mrr': mrr
+            }
+            model_name = os.path.join(self.args.checkpoint_dir, "model_{0:05d}.pt".format(epoch))
+            torch.save(checkpoint, model_name)
+            print("Save model as %s" % model_name)
 
     def train_epoch(self, epoch, batch_size):
         self.model.train()
@@ -63,19 +63,22 @@ class Trainer(object):
             return hidden
        
         dataloader = self.train_data
-        for x_batch, y_batch, _, mask_batch, max_subseqNum, max_acticonNum, subseqLen_batch, seqLen_batch in dataloader:
+        for x_cate_batch, mask_cate, max_acticonNum_cate, max_subseqNum_cate, subseqLen_cate, seqLen_cate, x_batch, mask_batch, seqLen_batch, y_batch,_ in dataloader:
+            x_cate_batch = x_cate_batch.to(self.device)
+            mask_cate = mask_cate.to(self.device)
+
             # st = datetime.datetime.now()
             x_batch = x_batch.to(self.device)
-            y_batch = y_batch.to(self.device)
             mask_batch = mask_batch.to(self.device)
+
+            y_batch = y_batch.to(self.device)
 
             # batch_size = x_batch.size(0)
 
             self.optim.zero_grad()
             # hidden_subseq = self.model.init_hidden(batch_size)
             # hidden_seq = self.model.init_hidden(batch_size)
-
-            logit_batch = self.model(x_batch, mask_batch, max_subseqNum, max_acticonNum, subseqLen_batch, seqLen_batch)
+            logit_batch = self.model(x_cate_batch, mask_cate, max_acticonNum_cate, max_subseqNum_cate, subseqLen_cate, seqLen_cate, x_batch, mask_batch, seqLen_batch, "train")
 
             # y_batch = y_batch[x_seq_index_list]
             ### batch_size*batch_size

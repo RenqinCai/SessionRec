@@ -27,6 +27,7 @@ class GRU4REC(nn.Module):
         self.m_cate_gru = nn.GRU(self.embedding_dim, self.hidden_size, self.num_layers, dropout=self.dropout_hidden, batch_first=True)
         self.m_short_gru = nn.GRU(self.embedding_dim, self.hidden_size, self.num_layers, dropout=self.dropout_hidden, batch_first=True)
 
+        self.m_mix_gru = nn.GRU(self.hidden_size, self.hidden_size, self.num_layers, dropout=self.dropout_hidden, batch_first=True)
 
         if shared_embedding:
             print("share embedding")
@@ -34,13 +35,6 @@ class GRU4REC(nn.Module):
         else:
             print("separate embedding")
             self.out_matrix = torch.rand(output_size, hidden_size, requires_grad=True).to(self.device)
-        
-        # if torch.cuda.device_count() > 1:
-        #     print("there are ", torch.cuda.device_count(), " GPUs")
-
-        #     self = nn.DataParallel(self)
-        # else:
-        #     print("there are ", torch.cuda.device_count(), " GPUs")
 
         self = self.to(self.device)
 
@@ -58,167 +52,74 @@ class GRU4REC(nn.Module):
         elif final_act.startswith('leaky-'):
             self.final_activation = nn.LeakyReLU(negative_slope=float(final_act.split('-')[1]))
 
-    def batchify(self, input_subseq, input_subseq_index, input_subseqIndex_seq):
-        input_seq_num = len(input_subseqIndex_seq)
-        input_seqLen_list = [len(i) for i in input_subseqIndex_seq]
+    def forward(self, input_cate_batch, mask_cate_batch, max_actionNum_cate_batch, max_subseqNum_cate_batch, subseqLen_cate_batch, seqLen_cate_batch, input_batch, mask_batch, seqLen_batch, train_test_flag):
 
-        input_seqLen_max = max(input_seqLen_list)
+        embedded_cate = input_cate_batch
+        embedded_cate = self.look_up(embedded_cate)
 
-        hidden_size = input_subseq.size(-1)
-        pad_input_seq_len_batch = np.zeros(input_seq_num)
-
-        ### use subseq index to covert the unordered subseq embedding the ordered subseq embedding from 0 to N
-        input_ordered_subseq = input_subseq[input_subseq_index]
-
-        input_seq_index_list = [i for i in range(len(input_seqLen_list))]
-
-        # zip_batch = sorted(zip(input_seqLen_list, [i for i in range(len(input_seqLen_list))]), reverse=True)
-        pad_input_seq_batch = []
-
-        last_seqIndex = 0
-        for input_seq_i in range(input_seq_num):
-            pad_input_seq_batch_temp_i = []
-            input_seqLen_i = input_seqLen_list[input_seq_i]
-            pad_zeros = torch.zeros((input_seqLen_i, hidden_size)).to(self.device)
-            pad_input_seq_batch_temp_i.append(pad_zeros)
-            # pad_input_seq_batch_temp_i.append(input_ordered_subseq[last_seqIndex: last_seqIndex+input_seqLen_i])
-
-            if input_seqLen_i < input_seqLen_max:
-                pad_zeros = torch.zeros((input_seqLen_max-input_seqLen_i, hidden_size)).to(self.device)
-                pad_input_seq_batch_temp_i.append(pad_zeros)
-
-            pad_input_seq_batch_temp_i = torch.cat(pad_input_seq_batch_temp_i, dim=0)
-            pad_input_seq_batch.append(pad_input_seq_batch_temp_i.unsqueeze(0))
-            last_seqIndex += input_seqLen_i
-        # input_seq_index_list_tmp = []
-        # for input_seq_i, (input_seqLen_i, seq_index_i) in enumerate(zip_batch):
-        #     input_seq_index_list_tmp[seq_index_i] = input_seq_i
-
-        # ### get seq representation from subseq
-        # for input_seq_i, (input_seqLen_i, seq_index_i) in enumerate(zip_batch):
-        #     input_seq_index_list[input_seq_i] = seq_index_i
-        #     pad_input_seq_batch_temp_i = []
-        #     input_subseqIndex_i = input_subseqIndex_seq[seq_index_i]
-        #     print("input_subseqIndex_i", input_subseqIndex_i)
-        #     # pad_input_seq_batch.append(input_ordered_subseq[input_subseqIndex_i])
-        #     pad_input_seq_batch_temp_i.append(input_ordered_subseq[input_subseqIndex_i])
-
-        #     # # print("pad len", pad_len)
-        #     if input_seqLen_max-input_seqLen_i > 0:
-        #         pad_zeros = torch.zeros((input_seqLen_max-input_seqLen_i, hidden_size)).to(self.device)
-        #         pad_input_seq_batch_temp_i.append(pad_zeros)
-        #     # pad_zeros = torch.zeros((input_seqLen_max, hidden_size)).to(self.device)
-        #     # pad_input_seq_batch_temp_i.append(pad_zeros)
-
-        #     pad_input_seq_batch_temp_i = torch.cat(pad_input_seq_batch_temp_i, dim=0)
-        #     pad_input_seq_batch.append(pad_input_seq_batch_temp_i.unsqueeze(0))
-           
-        #     pad_input_seq_len_batch[input_seq_i] = input_seqLen_i
-        
-        # pad_input_seq_batch = torch.zeros((input_seq_num, input_seqLen_max, hidden_size)).to(self.device)
-        # pad_input_seq_batch = pad_input_seq_batch.transpose(0, 1)
-        # pad_input_seq_batch = pad_sequence(pad_input_seq_batch)
-        
-        pad_input_seq_batch = torch.cat(pad_input_seq_batch, dim=0)
-        print("size", pad_input_seq_batch.size())
-        pad_input_seq_batch = pad_input_seq_batch.transpose(0, 1)
-
-        # input_seq_index_list = [i for i in range(len(input_seqLen_list))]
-        # print("input_seq_index_list", input_seq_index_list)
-        # pad_input_seq_len_batch = sorted(np.array(input_seqLen_list), reverse=True)
-        # return pad_input_seq_batch, pad_input_seq_len_batch
-
-        return pad_input_seq_batch, pad_input_seq_len_batch, input_seq_index_list
-
-    def forward(self, input, mask, max_subseqNum, max_actionNum, subseqLen_batch, seqLen_batch):
-        '''
-        Args:
-            input (B,): a batch of item indices from a session-parallel mini-batch.
-            target (B,): torch.LongTensor of next item indices from a session-parallel mini-batch.
-
-        Returns:
-            logit (B,C): Variable that stores the logits for the next items in the session-parallel mini-batch
-            hidden: GRU hidden state
-        '''
-
-        embedded = input
-        embedded = self.look_up(embedded)
-
-        ##actionNum_subseq*batch_size*hidden_size
-        # embedded = embedded.transpose(0, 1)
-        # print("input_subseq_len", input_subseq_len)
-
-        batch_size = embedded.size(0)
-        
-        # embedded_pad = torch.nn.utils.rnn.pack_padded_sequence(embedded, input_subseq_len)
-        hidden_subseq = self.init_hidden(batch_size)
-
-        # print("embed size", embedded.size())
-        # print("hidden size", hidden_subseq.size())
+        batch_size_cate = embedded_cate.size(0)
+        hidden_subseq_cate = self.init_hidden(batch_size_cate)
 
         ### embedded: batch_size*seq_len*hidden_size
-        output_subseq, hidden_subseq = self.m_cate_gru(embedded, hidden_subseq) # (sequence, B, H)
+        output_subseq_cate, hidden_subseq_cate = self.m_cate_gru(embedded_cate, hidden_subseq_cate) # (sequence, B, H)
 
-        ### output_subseq: batch_size*seq_len*hidden_size
-        # output_subseq, _ = torch.nn.utils.rnn.pad_packed_sequence(output_subseq)
-        # output_subseq = output_subseq.contiguous()
-        # print("output_subseq size", output_subseq.size())
-
-        ### output_subseq: action_num*batch_size*hidden_size
-        # output_subseq = output_subseq.transpose(0, 1)
-
-        mask = mask.unsqueeze(-1)
-         ###output_subseq: batch_size*action_num*hidden_size
-        output_subseq = output_subseq*mask
+        mask_cate_batch = mask_cate_batch.unsqueeze(-1)
+       
+        output_subseq_cate = output_subseq_cate*mask_cate_batch
         
-        pad_subseqLen_batch = [i-1 if i > 0 else 0 for i in subseqLen_batch]
-        first_dim_index = torch.arange(batch_size).long().to(self.device)
-        second_dim_index = torch.LongTensor(pad_subseqLen_batch).to(self.device)
+        pad_subseqLen_cate_batch = [i-1 if i > 0 else 0 for i in subseqLen_cate_batch]
+        first_dim_index = torch.arange(batch_size_cate).to(self.device)
+        second_dim_index = torch.LongTensor(pad_subseqLen_cate_batch).to(self.device)
         
-        input_seq = output_subseq[first_dim_index, second_dim_index, :]
+        input_seq_cate = output_subseq_cate[first_dim_index, second_dim_index, :]
 
-        ### batch_size_seq*seq_len*hidden
-        input_seq = input_seq.reshape(-1, max_subseqNum, output_subseq.size(-1))
-        input_seq = input_seq.contiguous()
-        # pad_input_seq_batch, pad_input_seq_len_batch, input_seq_index_list = self.batchify(last_output_subseq, input_subseq_index, input_subseqIndex_seq)
-
-        # pad_input_seq_batch = pad_input_seq_batch.transpose(0, 1)
-
-        # input_seq = input_seq.transpose(0, 1)
-        batch_size_seq = input_seq.size(0)
-        hidden_seq = self.init_hidden(batch_size_seq)
-
-        # pad_input_seq_batch = 
-        # pad_input_seq_batch = torch.nn.utils.rnn.pack_padded_sequence(pad_input_seq_batch, pad_input_seq_len_batch)
-
-        output_seq, hidden_seq = self.m_short_gru(input_seq, hidden_seq)
+        ### batch_size_seq*seq_len*hidden_size
+        input_seq_cate = input_seq_cate.reshape(-1, max_subseqNum_cate_batch, output_subseq_cate.size(-1))
+        input_seq_cate = input_seq_cate.contiguous()
         
-        # output_seq = output_seq.transpose(0, 1)
-        seqLen_batch = seqLen_batch - 1
-        # print("seqLen_batch", seqLen_batch)
-        first_dim_index =  torch.arange(batch_size_seq).long().to(self.device)
-        second_dim_index = torch.LongTensor(seqLen_batch).to(self.device)
-        # print("output_seq size", output_seq.size())
+        ### get the output from 5 latest actions
+        embedded_short = input_batch
+        embedded_short = self.look_up(embedded_short)
 
-        last_output = output_seq[first_dim_index, second_dim_index, :]
-        last_output = last_output.contiguous()
-        # print("last_output", last_output.size(), last_output.type(), last_output.get_device())
+        batch_size_short = embedded_short.size(0)
+        hidden_subseq_shrot = self.init_hidden(batch_size_short)
 
-        # output_seq, _ = torch.nn.utils.rnn.pad_packed_sequence(output_seq)
-        # output_seq = output_seq.contiguous()
-        # print("output_seq size", output_seq.size())
+        output_subseq_short, hidden_subseq_shrot = self.m_short_gru(embedded_short, hidden_subseq_shrot)
 
-        # last_output = output_seq[-1, :, :]
-        # print("lastoutput size", last_output.size())
+        mask_short_batch = mask_batch.unsqueeze(-1).float()
+        output_subseq_short = output_subseq_short*mask_short_batch
 
-        # last_output = last_output.view(-1, last_output.size(-1))  # (B,H)
-        # print("last_output", last_output.size())
-        # output = self.h2o(last_output)
-        # print("self.out_matrix", self.out_matrix.type(), self.out_matrix.get_device())
-        # print("output", last_output[:, :100])
-        output = F.linear(last_output, self.out_matrix)
+        pad_seqLen_batch = [i-1 if i > 0 else 0 for i in seqLen_batch]
+        first_dim_index = torch.arange(batch_size_short).to(self.device)
+        second_dim_index = torch.LongTensor(pad_seqLen_batch).to(self.device)
+
+        ### batch_size*hidden_size
+        output_short = output_subseq_short[first_dim_index, second_dim_index, :]
+        # output_seq, hidden_seq = self.m_short_gru(input_seq, hidden_seq)
+       
+        output_short = output_short.unsqueeze(-1)
+
+        # print("output_short", output_short.size())
+        # print("input_seq_cate size", input_seq_cate.size())
+        weight = torch.matmul(input_seq_cate, output_short)
+        weight_normalized = F.softmax(weight, dim=1)
+
+        if train_test_flag == "test":
+            print("weight", weight_normalized)
+
+        weighted_input_seq_cate = weight_normalized*input_seq_cate
+
+        sum_input_seq_cate = torch.sum(weighted_input_seq_cate, dim=1)
+        output_short = output_short.squeeze()
+
+        mixture_output = sum_input_seq_cate+output_short
+
+        ### debug: if output only comes from short
+        # mixture_output = output_short
+        # print("mixture_output", mixture_output)
+
+        output = F.linear(mixture_output, self.out_matrix)
         
-#         logit = self.final_activation(output) ## (B, output_size)
         logit = output
 
         return logit
