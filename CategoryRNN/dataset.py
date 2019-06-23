@@ -1,171 +1,303 @@
 import pandas as pd
 import numpy as np
 import torch
-
+import datetime
 import pickle
+import random
+# import sys
 
 class Dataset(object):
-    def __init__(self, itemFile, sep='\t', session_key='SessionID', item_key='ItemId', time_key='timestamp', n_sample=-1, itemmap=None, itemstamp=None, time_sort=False):
 
-        data_file = open(itemFile, "rb")
+	def __init__(self, action_file, cate_file, data_name, observed_threshold, window_size, itemmap=None):
+		action_f = open(action_file, "rb")
 
-        data_sess_arr = pickle.load(data_file)
+		self.m_itemmap = {}
+		self.m_catemap = {}
 
-        item_sess_arr = data_sess_arr
+		action_seq_arr_total = pickle.load(action_f)
 
-        sess_num = len(item_sess_arr)
-        print("session num", sess_num)
+		cate_f = open(cate_file, "rb")
+		cate_seq_arr_total = pickle.load(cate_f)
 
-        sess_len_list = []
+		seq_num = len(action_seq_arr_total)
+		print("seq num", seq_num)
 
-        self.itemmap = itemmap
+		# self.m_seq_list = []
 
-        item_id_sess_arr = []
+		### each user's sequence is composed of multiple sub sequences
+		### sub sequence is composed of actions	
+		
+		self.m_input_seq_list = []
+		self.m_input_seqLen_list = []
+		# self.m_input_subseqNum_seq_list = []
 
-        for sess_index in range(sess_num):
-            item_sess_unit_list = item_sess_arr[sess_index]
-            # print("item_sess_unit_list", item_sess_unit_list)
-            
-            sess_len = len(item_sess_unit_list)
+		# self.m_input_subseq_list_cate_list = []
+		# self.m_input_subseqLen_list_cate_list = []
+		# self.m_input_subseqNum_seq_cate_list = []
 
-            # sess_len_list.append(sess_len)
-            sess_action_num = 0
+		self.m_input_seq_list_cate_list = []
+		self.m_input_seqLen_list_cate_list = []
 
-            for action_index in range(sess_len):
-                item = item_sess_unit_list[action_index]
-                if itemmap is None:
-                    self.addItem(item, itemmap)
+		self.m_target_action_seq_list = []
+		self.m_target_cate_seq_list = []
 
-                if item not in self.itemmap:
-                    continue
-                
-                item_id = self.itemmap[item]
+		self.m_input_seq_idx_list = []
 
-                sess_action_num += 1
-                # if itemmap is not None:
-                #     print(item_id, item)
-                item_id_sess_arr.append(item_id)
+		print("loading item map")
 
-            if sess_action_num == 0:
-                print("error action num zero")
-            sess_len_list.append(sess_action_num)
+		print("finish loading item map")
+		print("observed_threshold", observed_threshold, window_size)
+		print("loading data")
+		# seq_num = 1
+		for seq_index in range(seq_num):
+			# print("*"*10, "seq index", seq_index, "*"*10)
+			action_seq_arr = action_seq_arr_total[seq_index]
+			cate_seq_arr = cate_seq_arr_total[seq_index]
 
-        print("item sess arr", item_sess_arr[:10])
-        print("item id sess arr", item_id_sess_arr[:100])
-        self.click_offsets = self.getClickOffset(sess_num, sess_len_list)
-        self.item_arr = np.array(item_id_sess_arr)
-        self.sess_num = sess_num
-        # print(self.itemmap)
-        # self.df = pd.read_csv(path, sep=sep, names=[session_key, item_key, time_key])
-        # self.session_key = session_key
-        # self.item_key = item_key
-        # self.time_key = time_key
-        # self.time_sort = time_sort
+			actionNum_seq = len(action_seq_arr)
 
-        # if n_sample > 0:
-        #   self.df = self.df[:n_sample]
+			if actionNum_seq < window_size :
+				window_size = actionNum_seq
 
-        # self.add_item_indices(itemmap=itemmap)
+			cate_action_list_map_user = {}
+			for action_index in range(actionNum_seq):
+				item_cur = action_seq_arr[action_index]
+				if item_cur not in self.m_itemmap:
+					item_id_cur = len(self.m_itemmap)
+					self.m_itemmap[item_cur] = item_id_cur
 
-        # self.df.sort_values([session_key, time_key], inplace=True)
-        # self.click_offsets = self.get_click_offset()
-        # self.session_idx_arr = self.order_session_idx()
+				subseq_num = 0
+				action_list_sub_seq = []
+				actionNum_list_sub_seq = []
 
-    def addItem(self, item, itemmap=None):
-        if itemmap is None:
-            if self.itemmap is None:
-                self.itemmap = {}
+				cate_cur = cate_seq_arr[action_index]
+				if action_index < observed_threshold:
 
-            if item not in self.itemmap:
-                item_id = len(self.itemmap)
-                self.itemmap[item] = item_id
+					if cate_cur not in self.m_catemap:
+						cate_id_cur = len(self.m_catemap)
+						self.m_catemap[cate_cur] = cate_id_cur
 
-    def getClickOffset(self, sess_num, sess_len_list):
+					if cate_cur not in cate_action_list_map_user:
+						cate_action_list_map_user[cate_cur] = []
 
-        if sess_num != len(sess_len_list):
-            print("error sess num")
-        offsets = np.zeros(sess_num+1, dtype=np.int32)
-        offsets[1:] = np.array(sess_len_list).cumsum()
+					cate_action_list_map_user[cate_cur].append(item_cur)
 
-        return offsets
+					continue
 
-    # def add_item_indices(self, itemmap=None):
-    #   if itemmap is None:
-    #       item_ids = self.df[self.item_key].unique()
-    #       item2idx = pd.Series(data=np.arange(len(item_ids)), index=item_ids)
+				if action_index <= window_size:
+					subseq = action_seq_arr[:action_index]
 
-    #       itemmap = pd.DataFrame({self.item_key: item_ids, 'item_idx':item2idx[item_ids].values})
+					# action_list_sub_seq.append(subseq)
+					# actionNum_list_sub_seq.append(action_index)
+					
+					self.m_input_seq_list.append(subseq)
+					self.m_input_seqLen_list.append(action_index)
 
-    #   self.itemmap = itemmap
+					# subseq_num += 1
+					# print("cate action map", cate_action_list_map_user)
+					# for cate in cate_action_list_map_user:
+					# 	subseq_cate = cate_action_list_map_user[cate].copy()[:5]
+					# 	actionNum_subseq_cate = len(subseq_cate)
 
-    #   self.df = pd.merge(self.df, self.itemmap, on=self.item_key, how='inner')
+					# 	action_list_sub_seq.append(subseq_cate)
+					# 	actionNum_list_sub_seq.append(actionNum_subseq_cate)
+						
+					# 	subseq_num += 1
 
-    # def get_click_offset(self):
-    #   offsets = np.zeros(self.df[self.session_key].nunique()+1, dtype=np.int32)
-    #   offsets[1:] = self.df.groupby(self.session_key).size().cumsum()
+					if cate_cur in cate_action_list_map_user:
+						subseq_cate = cate_action_list_map_user[cate_cur].copy()[:5]
+						actionNum_subseq_cate = len(subseq_cate)
 
-    #   return offsets
+						# action_list_sub_seq.append(subseq_cate)
+						# actionNum_list_sub_seq.append(actionNum_subseq_cate)
+						subseq_num += 1
 
-    # def order_session_idx(self):
-    #   if self.time_sort:
-    #       sessions_start_time = self.df.groupby(self.session_key)[self.time_key].min().values
-    #       session_idx_arr = np.argsort(sessions_start_time)
-    #   else:
-    #       session_idx_arr = np.arange(self.df[self.session_key].nunique())
+						self.m_input_seq_list_cate_list.append(subseq_cate)
+						self.m_input_seqLen_list_cate_list.append(actionNum_subseq_cate)
+					else:
+						self.m_input_seq_list_cate_list.append([])
+						self.m_input_seqLen_list_cate_list.append(0)
+					# self.m_input_subseqNum_seq_cate_list.append(subseq_num)
+					
+					target_subseq = action_seq_arr[action_index]
+					self.m_target_action_seq_list.append(target_subseq)
 
-    #   return session_idx_arr
-    @property
-    def items(self):
-        print("first item", self.itemmap[0])
-        return self.itemmap
-        # return len(self.itemmap)
-        # return self.itemmap.ItemId.unique()
+					self.m_input_seq_idx_list.append(action_index)
+
+				if action_index > window_size:
+					subseq = action_seq_arr[action_index-window_size:action_index]
+					# action_list_sub_seq.append(subseq)
+					# actionNum_list_sub_seq.append(window_size)
+
+					self.m_input_seq_list.append(subseq)
+					self.m_input_seqLen_list.append(window_size)
+
+					# print("cate action map", cate_action_list_map_user)
+					if cate_cur in cate_action_list_map_user:
+						subseq_cate = cate_action_list_map_user[cate_cur].copy()[:5]
+						actionNum_subseq_cate = len(subseq_cate)
+
+						# action_list_sub_seq.append(subseq_cate)
+						# actionNum_list_sub_seq.append(actionNum_subseq_cate)
+						subseq_num += 1
+
+						self.m_input_seq_list_cate_list.append(subseq_cate)
+						self.m_input_seqLen_list_cate_list.append(actionNum_subseq_cate)
+					else:
+						self.m_input_seq_list_cate_list.append([])
+						self.m_input_seqLen_list_cate_list.append(0)
+
+					target_subseq = action_seq_arr[action_index]
+					self.m_target_action_seq_list.append(target_subseq)
+
+					self.m_input_seq_idx_list.append(action_index)
+		
+				if cate_cur not in self.m_catemap:
+					cate_id_cur = len(self.m_catemap)
+					self.m_catemap[cate_cur] = cate_id_cur
+
+				if cate_cur not in cate_action_list_map_user:
+					cate_action_list_map_user[cate_cur] = []
+
+				cate_action_list_map_user[cate_cur].append(item_cur)
+
+		# print("debug", self.m_input_subseq_list_seq_list[:10])
+		print("subseq num", len(self.m_input_seq_list))
+		print("subseq len num", len(self.m_input_seqLen_list))
+		print("seq idx num", len(self.m_input_seq_idx_list))
+
+	@property
+	def items(self):
+		# print("first item", self.m_itemmap['<PAD>'])
+		return self.m_itemmap
 
 class DataLoader():
-    def __init__(self, dataset, batch_size=50):
-        self.dataset = dataset
-        self.batch_size = batch_size
-        # print("self.batch_size", self.batch_size)
+	def __init__(self, dataset, batch_size):
+		self.m_dataset = dataset
+		self.m_batch_size = batch_size
 
-    def __iter__(self):
-        click_offsets = self.dataset.click_offsets
-        item_arr = self.dataset.item_arr
+		"""
+		sort subsequences 
+		"""
 
-        sess_num = self.dataset.sess_num
+		sorted_data = sorted(zip(self.m_dataset.m_input_seqLen_list_cate_list, self.m_dataset.m_input_seq_list_cate_list, self.m_dataset.m_input_seq_list, self.m_dataset.m_input_seqLen_list , self.m_dataset.m_target_action_seq_list, self.m_dataset.m_input_seq_idx_list), reverse=True)
+		
+		self.m_dataset.m_input_seqLen_list_cate_list, self.m_dataset.m_input_seq_list_cate_list, self.m_dataset.m_input_seq_list, self.m_dataset.m_input_seqLen_list , self.m_dataset.m_target_action_seq_list, self.m_dataset.m_input_seq_idx_list = zip(*sorted_data)
 
-        iters = np.arange(self.batch_size)
-        maxiter = iters.max()
-        start = click_offsets[iters]
-        end = click_offsets[iters+1]
+	def __iter__(self):
+		
+		input_seqLen_list_cate_list = self.m_dataset.m_input_seqLen_list_cate_list
+		input_seq_list_cate_list = self.m_dataset.m_input_seq_list_cate_list
+		input_seq_list = self.m_dataset.m_input_seq_list
+		input_seqLen_list = self.m_dataset.m_input_seqLen_list
+		target_action_seq_list = self.m_dataset.m_target_action_seq_list
+		input_seq_idx_list = self.m_dataset.m_input_seq_idx_list
 
-        mask_sess_arr = []
-        finished = False
+		## batchify, subsequences from the same user should be put in the same batch
 
-        while not finished:
-            minlen = (end-start).min()
+		batch_size = self.m_batch_size
+		
+		input_seq_num = len(input_seqLen_list_cate_list)
+		batch_num = int(input_seq_num/batch_size)
 
-            for i in range(minlen-1):
-                idx_input = item_arr[start+i]
-                idx_target = item_arr[start+i+1]
-                # print(idx_input)
-                # print(idx_target)
-                input_tensor = torch.LongTensor(idx_input)
-                target_tensor = torch.LongTensor(idx_target)
+		print("batch_num", batch_num)
 
-                yield input_tensor, target_tensor, mask_sess_arr
+		for batch_index in range(batch_num):
+			
+			# print("batch index", batch_index)
 
+			x_cate_batch = []
 
-            start = start + minlen - 1
-            maxiter = maxiter + 1
+			y_batch = []
 
-            mask_sess_arr = np.arange(self.batch_size)[(end-start) <= 1]
-            for mask_sess in mask_sess_arr:
-                maxiter = maxiter+1
-                if maxiter >= sess_num:
-                    finished = True
-                    break
+			idx_batch = []
 
-                start[mask_sess] = click_offsets[maxiter]
-                end[mask_sess] = click_offsets[maxiter+1]
+			max_actionNum_cate_batch = 0
+	
+			actionNum_cate_batch = []
+			
+			for seq_index_batch in range(batch_size):
+				seq_index = batch_index*batch_size+seq_index_batch
 
-                iters[mask_sess] = maxiter
+				seqlen_list_cate_user = input_seqLen_list_cate_list[seq_index]
+
+				actionNum_cate_batch.append(seqlen_list_cate_user)
+
+			max_actionNum_cate_batch = max(actionNum_cate_batch)
+			if max_actionNum_cate_batch == 0:
+				max_actionNum_cate_batch = 1
+			# print("max_subseqNum_cate_batch", max_subseqNum_cate_batch)
+
+			seqLen_cate_batch = []
+			mask_cate_batch = None
+
+			# x_subseq_index_batch = []
+			for seq_index_batch in range(batch_size):
+				seq_index = batch_index*batch_size+seq_index_batch
+
+				seq_list_cate_user = input_seq_list_cate_list[seq_index]
+
+				pad_seq_list_cate_user = seq_list_cate_user+[0]*(max_actionNum_cate_batch-len(seq_list_cate_user))
+
+				x_cate_batch.append(pad_seq_list_cate_user)
+
+				# print("pad_subseq_list_user", pad_subseq_list_user)
+
+				seqLen_cate_user = input_seqLen_list_cate_list[seq_index]
+				seqLen_cate_batch.append(seqLen_cate_user)
+				
+				y = target_action_seq_list[seq_index]
+
+				y_batch.append(y)
+				idx_batch.append(input_seq_idx_list[seq_index])
+
+			seqLen_cate_batch = np.array(seqLen_cate_batch)
+			mask_cate_batch = np.arange(max_actionNum_cate_batch)[None,:] < seqLen_cate_batch[:, None]
+
+			x_cate_batch = np.array(x_cate_batch)
+
+			x_batch = []
+			mask_batch = []
+			seqLen_batch = []
+			
+			for seq_index_batch in range(batch_size):
+				seq_index = batch_index*batch_size+seq_index_batch
+
+				seq_user = input_seq_list[seq_index]
+				seqLen_user = input_seqLen_list[seq_index]
+			
+				seqLen_batch.append(seqLen_user)
+
+			max_seqLen_batch = max(seqLen_batch)
+
+			for seq_index_batch in range(batch_size):
+				seq_index = batch_index*batch_size+seq_index_batch
+
+				seq_user = input_seq_list[seq_index]
+
+				pad_seq_user = seq_user+[0]*(max_seqLen_batch-len(seq_user))
+			
+				x_batch.append(pad_seq_user)
+			
+			seqLen_batch = np.array(seqLen_batch)
+			# print("seqLen_batch", seqLen_batch)
+			mask_batch = np.arange(max_seqLen_batch)[None,:] < seqLen_batch[:, None]
+			
+			x_batch = np.array(x_batch)
+
+			y_batch = np.array(y_batch)
+			idx_batch = np.array(idx_batch)
+
+			x_batch_tensor = torch.from_numpy(x_batch)
+			mask_batch_tensor = torch.from_numpy(mask_batch*1)
+
+			# print("x_cate_batch_tensor", x_cate_batch.shape)
+			x_cate_batch_tensor = torch.from_numpy(x_cate_batch)
+			y_batch_tensor = torch.from_numpy(y_batch)
+			mask_cate_batch_tensor = torch.from_numpy(mask_cate_batch*1).float()
+			# print("x batch size", x_cate_batch_tensor.size())
+			# print("mask batch size", mask_batch_tensor.size())
+
+			idx_batch_tensor = torch.LongTensor(idx_batch)
+			
+			yield x_cate_batch_tensor, mask_cate_batch_tensor, max_actionNum_cate_batch, seqLen_cate_batch, x_batch_tensor, mask_batch_tensor, seqLen_batch, y_batch_tensor, idx_batch_tensor

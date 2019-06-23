@@ -23,8 +23,8 @@ class LossFunction(nn.Module):
         else:
             raise NotImplementedError
 
-    def forward(self, logit):
-        return self._loss_fn(logit)
+    def forward(self, logit, target):
+        return self._loss_fn(logit, target)
 
 
 class SampledCrossEntropyLoss(nn.Module):
@@ -40,7 +40,7 @@ class SampledCrossEntropyLoss(nn.Module):
         self.xe_loss = nn.CrossEntropyLoss()
         self.use_cuda = use_cuda
 
-    def forward(self, logit):
+    def forward(self, logit, target):
         batch_size = logit.size(1)
         target = Variable(torch.arange(batch_size).long())
         if self.use_cuda: target = target.cuda()
@@ -55,7 +55,7 @@ class BPRLoss(nn.Module):
         """
         super(BPRLoss, self).__init__()
 
-    def forward(self, logit):
+    def forward(self, logit, target):
         """
         Args:
             logit (BxB): Variable that stores the logits for the items in the mini-batch
@@ -78,7 +78,7 @@ class BPR_max(nn.Module):
         """
         super(BPR_max, self).__init__()
 
-    def forward(self, logit):
+    def forward(self, logit, target):
         logit_softmax = F.softmax(logit, dim=1)
         diff = logit.diag().view(-1, 1).expand_as(logit) - logit
         loss = -torch.log(torch.mean(logit_softmax * torch.sigmoid(diff)))
@@ -92,7 +92,7 @@ class TOP1Loss(nn.Module):
         """
         super(TOP1Loss, self).__init__()
 
-    def forward(self, logit):
+    def forward(self, logit, target):
         """
         Args:
             logit (BxB): Variable that stores the logits for the items in the mini-batch
@@ -100,6 +100,7 @@ class TOP1Loss(nn.Module):
                          dimension corresponds to sampled number of items to evaluate
         """
         # differences between the item scores
+        # print("logit size", logit.size())
         diff = -(logit.diag().view(-1, 1).expand_as(logit) - logit)
         # final loss
         loss = torch.sigmoid(diff).mean() + torch.sigmoid(logit ** 2).mean()
@@ -115,7 +116,7 @@ class TOP1_max(nn.Module):
         """
         super(TOP1_max, self).__init__()
 
-    def forward(self, logit):
+    def forward(self, logit, target):
         logit_softmax = F.softmax(logit, dim=1)
 
         diff = -(logit.diag().view(-1, 1).expand_as(logit) - logit)

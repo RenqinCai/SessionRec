@@ -1,7 +1,7 @@
 import torch
 
 
-def get_recall(indices, targets):
+def get_recall(indices, targets, mask):
     """
     Calculates the recall score for the given predictions and targets
 
@@ -14,15 +14,19 @@ def get_recall(indices, targets):
     """
 
     targets = targets.view(-1, 1).expand_as(indices)
-    hits = (targets == indices).nonzero()
-    if len(hits) == 0:
-        return 0
-    n_hits = (targets == indices).nonzero()[:, :-1].size(0)
-    recall = float(n_hits) / targets.size(0)
+    hits = (targets == indices)
+    val = int( mask.int().sum() )
+        
+    hits *= mask.view(-1, 1).expand_as(indices)
+    hits = hits.nonzero()
+
+    nhits = hits[:, :-1]
+    recall = float(hits.size(0)) / float( mask.int().sum() )
+
     return recall
 
 
-def get_mrr(indices, targets):
+def get_mrr(indices, targets, mask):
     """
     Calculates the MRR score for the given predictions and targets
     Args:
@@ -35,15 +39,18 @@ def get_mrr(indices, targets):
 
     tmp = targets.view(-1, 1)
     targets = tmp.expand_as(indices)
-    hits = (targets == indices).nonzero()
+    hits = (targets == indices)
+    hits *= mask.view(-1, 1).expand_as(indices)
+    
+    hits = hits.nonzero()
     ranks = hits[:, -1] + 1
     ranks = ranks.float()
     rranks = torch.reciprocal(ranks)
-    mrr = torch.sum(rranks).data / targets.size(0)
-    return mrr
+    mrr = torch.sum(rranks).data / float( mask.int().sum() )
+    return mrr.item()
 
 
-def evaluate(indices, targets, k=20):
+def evaluate(indices, targets, mask, k=20, debug=False):
     """
     Evaluates the model using Recall@K, MRR@K scores.
 
@@ -61,6 +68,6 @@ def evaluate(indices, targets, k=20):
     # print("topK", _)
     # print("predict top k", indices)
     # print("true target", targets)
-    recall = get_recall(indices, targets)
-    mrr = get_mrr(indices, targets)
+    recall = get_recall(indices, targets, mask)
+    mrr = get_mrr(indices, targets, mask)
     return recall, mrr
