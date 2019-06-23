@@ -6,7 +6,7 @@ import torch
 import numpy as np
 import os
 from dataset import *
-
+import datetime
 
 class Trainer(object):
     def __init__(self, model, train_data, eval_data, optim, use_cuda, loss_func, topk, args):
@@ -68,6 +68,7 @@ class Trainer(object):
             input_x_batch = input_x_batch.to(self.device)
             target_y_batch = target_y_batch.to(self.device)
 
+            # st = datetime.datetime.now()
             # input_x_batch, target_y_batch, x_len_batch = batchifyData(input_x, target_y)
     
             self.optim.zero_grad()
@@ -86,6 +87,9 @@ class Trainer(object):
             torch.nn.utils.clip_grad_norm(self.model.parameters(), max_norm)
 
             self.optim.step()
+
+            # et = datetime.datetime.now()
+            # print("duration batch", et-st)
 
         mean_losses = np.mean(losses)
         return mean_losses

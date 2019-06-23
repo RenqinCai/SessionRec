@@ -32,7 +32,7 @@ class Dataset(object):
 		seq_num = len(action_seq_arr_total)
 		print("seq num", seq_num)
 
-		self.m_seq_list = []
+		# self.m_seq_list = []
 
 		self.m_input_action_seq_list = []
 		self.m_target_action_seq_list = []
@@ -40,29 +40,29 @@ class Dataset(object):
 
 		print("loading item map")
 		
-		for seq_index in range(seq_num):
-			action_seq_arr = action_seq_arr_total[seq_index]
+		# for seq_index in range(seq_num):
+		# 	action_seq_arr = action_seq_arr_total[seq_index]
 
-			action_num_seq = len(action_seq_arr)
+		# 	action_num_seq = len(action_seq_arr)
 
-			action_seq_list = []
+		# 	action_seq_list = []
 
-			for action_index in range(action_num_seq):
-				item = action_seq_arr[action_index]
+		# 	for action_index in range(action_num_seq):
+		# 		item = action_seq_arr[action_index]
 
-				action_seq_list.append(item)
+		# 		action_seq_list.append(item)
 
-				if item not in self.m_itemmap:
-					item_id = len(self.m_itemmap)
-					self.m_itemmap[item] = item_id
+		# 		if item not in self.m_itemmap:
+		# 			item_id = len(self.m_itemmap)
+		# 			self.m_itemmap[item] = item_id
 
-			self.m_seq_list.append(action_seq_list)
+		# 	self.m_seq_list.append(action_seq_list)
 
 		print("finish loading item map")
 		print("observed_threshold", observed_threshold, window_size)
 		print("loading data")
 		for seq_index in range(seq_num):
-			action_seq_arr = self.m_seq_list[seq_index]
+			action_seq_arr = action_seq_arr_total[seq_index]
 
 			action_num_seq = len(action_seq_arr)
 
@@ -70,6 +70,11 @@ class Dataset(object):
 				window_size = action_num_seq
 
 			for action_index in range(action_num_seq):
+				item = action_seq_arr[action_index]
+				if item not in self.m_itemmap:
+					item_id = len(self.m_itemmap)
+					self.m_itemmap[item] = item_id
+
 				if action_index < observed_threshold:
 					continue
 
@@ -135,7 +140,7 @@ class DataLoader():
         
 		input_num = len(input_action_seq_list)
 		batch_num = int(input_num/batch_size)
-
+		print("batch num", batch_num)
 		for batch_index in range(batch_num):
 			x_batch = []
 			y_batch = []
@@ -143,7 +148,7 @@ class DataLoader():
 
 			for seq_index_batch in range(batch_size):
 				seq_index = batch_index*batch_size+seq_index_batch
-				x = input_action_seq_list[seq_index]
+				x = list(input_action_seq_list[seq_index])
 				y = target_action_seq_list[seq_index]
                 
 				x_batch.append(x)
@@ -168,6 +173,11 @@ class DataLoader():
 		pad_target_action_seq_batch = np.zeros(batch_size)
 		pad_seq_len_batch = np.zeros(batch_size)
 		pad_idx_batch = np.zeros(batch_size)
+
+		# print(len(seq_len_batch))
+		# print(len(input_action_seq_batch))
+		# print(len(target_action_seq_batch))
+		# print(len(idx_batch))
 
 		zip_batch = sorted(zip(seq_len_batch, input_action_seq_batch, target_action_seq_batch, idx_batch), reverse=True)
 

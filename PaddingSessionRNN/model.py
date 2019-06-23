@@ -80,12 +80,15 @@ class GRU4REC(nn.Module):
         # print("embedded_pad size", embedded_pad.size())
         output, hidden = self.gru(embedded_pad, hidden) # (sequence, B, H)
 
-        output, _ = torch.nn.utils.rnn.pad_packed_sequence(output)
-        output = output.contiguous()
+        
+        # output, _ = torch.nn.utils.rnn.pad_packed_sequence(output)
+        # output = output.contiguous()
         # print("output size", output.size())
 
-        last_output = output[-1, :, :]
+        # last_output = output[-1, :, :]
         # print("lastoutput size", last_output.size())
+        last_output = hidden[-1]
+        # print("last_output size", last_output.size())
 
         last_output = last_output.view(-1, last_output.size(-1))  # (B,H)
         output = F.linear(last_output, self.out_matrix)
