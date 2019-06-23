@@ -225,6 +225,8 @@ class DataLoader():
 			mask_cate_batch = None
 			subseqLen_cate_batch = []
 			seqLen_cate_batch = []
+			mask_cate_seq_batch = None
+
 			# x_subseq_index_batch = []
 			for seq_index_batch in range(batch_size):
 				seq_index = batch_index*batch_size+seq_index_batch
@@ -255,7 +257,8 @@ class DataLoader():
 			seqLen_cate_batch = np.array(seqLen_cate_batch)
 
 			mask_cate_batch = np.arange(max_actionNum_cate_batch)[None, :] < subseqLen_cate_batch[:, None]
-			
+			mask_cate_seq_batch = np.arange(max_subseqNum_cate_batch)[None,:] < seqLen_cate_batch[:, None]
+
 			x_cate_batch = np.array(x_cate_batch)
 
 			x_batch = []
@@ -296,14 +299,9 @@ class DataLoader():
 			x_cate_batch_tensor = torch.from_numpy(x_cate_batch)
 			y_batch_tensor = torch.from_numpy(y_batch)
 			mask_cate_batch_tensor = torch.from_numpy(mask_cate_batch*1).float()
-			# print("x batch size", x_cate_batch_tensor.size())
-			# print("mask batch size", mask_batch_tensor.size())
+			mask_cate_seq_batch_tensor = torch.from_numpy(mask_cate_seq_batch*1).float()
 
 			idx_batch_tensor = torch.LongTensor(idx_batch)
 			
-			# print("max_subseqNum_cate_batch", max_subseqNum_cate_batch)
-			# print("max_actionNum_cate_batch", max_actionNum_cate_batch)
-
-			yield x_cate_batch_tensor, mask_cate_batch_tensor, max_actionNum_cate_batch, max_subseqNum_cate_batch, subseqLen_cate_batch, seqLen_cate_batch, x_batch_tensor, mask_batch_tensor, seqLen_batch, y_batch_tensor, idx_batch_tensor
-
-			# yield x_cate_batch_tensor, x_batch_tensor, seqLen_batch, y_batch_tensor, idx_batch_tensor, mask_cate_batch_tensor, mask_batch_tensor, max_subseqNum_cate_batch, max_actionNum_cate_batch, subseqLen_cate_batch, seqLen_cate_batch
+	
+			yield x_cate_batch_tensor, mask_cate_batch_tensor, mask_cate_seq_batch_tensor, max_actionNum_cate_batch, max_subseqNum_cate_batch, subseqLen_cate_batch, seqLen_cate_batch, x_batch_tensor, mask_batch_tensor, seqLen_batch, y_batch_tensor, idx_batch_tensor

@@ -5,8 +5,9 @@ import numpy as np
 from torch.nn.utils.rnn import pad_sequence
 
 class GRU4REC(nn.Module):
-    def __init__(self, window_size, input_size, hidden_size, output_size, num_layers=1, final_act='tanh', dropout_hidden=.8, dropout_input=0, batch_size=50, embedding_dim=-1, use_cuda=False, shared_embedding=True):
+    def __init__(self, log, window_size, input_size, hidden_size, output_size, num_layers=1, final_act='tanh', dropout_hidden=.8, dropout_input=0, batch_size=50, embedding_dim=-1, use_cuda=False, shared_embedding=True):
         super(GRU4REC, self).__init__()
+        self.m_log = log
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
@@ -30,10 +31,15 @@ class GRU4REC(nn.Module):
         self.m_mix_gru = nn.GRU(self.hidden_size, self.hidden_size, self.num_layers, dropout=self.dropout_hidden, batch_first=True)
 
         if shared_embedding:
-            print("share embedding")
+           
+            message = "share embedding"
+            self.m_log.addOutput2IO(message)
+
             self.out_matrix = self.look_up.weight.to(self.device)
         else:
-            print("separate embedding")
+            message = "separate embedding"
+            self.m_log.addOutput2IO(message)
+
             self.out_matrix = torch.rand(output_size, hidden_size, requires_grad=True).to(self.device)
 
         self = self.to(self.device)
@@ -52,7 +58,7 @@ class GRU4REC(nn.Module):
         elif final_act.startswith('leaky-'):
             self.final_activation = nn.LeakyReLU(negative_slope=float(final_act.split('-')[1]))
 
-    def forward(self, input_cate_batch, mask_cate_batch, max_actionNum_cate_batch, max_subseqNum_cate_batch, subseqLen_cate_batch, seqLen_cate_batch, input_batch, mask_batch, seqLen_batch, train_test_flag):
+    def forward(self, input_cate_batch, mask_cate_batch, mask_cate_seq_batch, max_actionNum_cate_batch, max_subseqNum_cate_batch, subseqLen_cate_batch, seqLen_cate_batch, input_batch, mask_batch, seqLen_batch, train_test_flag):
 
         embedded_cate = input_cate_batch
         embedded_cate = self.look_up(embedded_cate)
@@ -102,12 +108,27 @@ class GRU4REC(nn.Module):
         # print("output_short", output_short.size())
         # print("input_seq_cate size", input_seq_cate.size())
         weight = torch.matmul(input_seq_cate, output_short)
+        weight = weight.squeeze(-1)
         weight_normalized = F.softmax(weight, dim=1)
 
-        if train_test_flag == "test":
-            print("weight", weight_normalized)
+        # print("mask_cate_seq_batch size", mask_cate_seq_batch.size())
+        # print("weight_normalized", weight_normalized.size())
 
-        weighted_input_seq_cate = weight_normalized*input_seq_cate
+        weight_normalized_mask = weight_normalized*mask_cate_seq_batch
+        weight_normalized_mask_sum = torch.sum(weight_normalized_mask, dim=1)
+        # print("weight size", weight_normalized_mask.size(), weight_normalized_mask_sum.size())
+        weight_normalized_mask_sum = weight_normalized_mask_sum.unsqueeze(-1)
+        weight_normalized_mask = weight_normalized_mask/weight_normalized_mask_sum
+
+        # if train_test_flag == "test":
+        #     print("weight", weight_normalized_mask)
+        #     print("weight shape", weight_normalized_mask.size())
+
+        # print("weight_normalized_mask", weight_normalized_mask.size())
+        # print("input_seq_cate", input_seq_cate.size())
+
+        weight_normalized_mask = weight_normalized_mask.unsqueeze(-1)
+        weighted_input_seq_cate = weight_normalized_mask*input_seq_cate
 
         sum_input_seq_cate = torch.sum(weighted_input_seq_cate, dim=1)
         output_short = output_short.squeeze()
@@ -123,26 +144,6 @@ class GRU4REC(nn.Module):
         logit = output
 
         return logit
-
-
-    def onehot_encode(self, input):
-        """
-        Returns a one-hot vector corresponding to the input
-
-        Args:
-            input (B,): torch.LongTensor of item indices
-            buffer (B,output_size): buffer that stores the one-hot vector
-        Returns:
-            one_hot (B,C): torch.FloatTensor of one-hot vectors
-        """
-
-        self.onehot_buffer.zero_()
-
-        index = input.unsqueeze(2)
-        # index = input.view(-1, 1)
-        one_hot = self.onehot_buffer.scatter_(2, index, 1)
-
-        return one_hot
 
     def embedding_dropout(self, input):
         p_drop = torch.Tensor(input.size(0), input.size(1), 1).fill_(1 - self.dropout_input)  # (B,1)

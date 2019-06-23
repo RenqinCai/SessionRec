@@ -17,6 +17,7 @@ from trainer import *
 from torch.utils import data
 import pickle
 import sys
+import logger
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--hidden_size', default=50, type=int)
@@ -64,6 +65,7 @@ parser.add_argument('--load_model', default=None,  type=str)
 parser.add_argument('--checkpoint_dir', type=str, default='checkpoint')
 parser.add_argument('--data_name', default=None, type=str)
 parser.add_argument('--shared_embedding', default=None, type=int)
+parser.add_argument('--patience', default=10, type=int)
 
 # Get the arguments
 args = parser.parse_args()
@@ -156,11 +158,16 @@ def main():
 
 	window_size = args.window_size
 
+	log = logger.Logger()
+	log.addIOWriter(args)
+
 	shared_embedding = args.shared_embedding
-	print("shared_embedding", str(shared_embedding))
+	message = "shared_embedding: "+str(shared_embedding)
+	log.addOutput2IO(message)
 
 	if embedding_dim == -1:
-		print("embedding dim not -1", embedding_dim)
+		message = "embedding dim not -1 "+str(embedding_dim)
+		log.addOutput2IO(message)
 		raise AssertionError()
 
 	train_data_action = args.data_folder+"train_"+args.data_action
@@ -171,22 +178,41 @@ def main():
 	valid_data_cate = args.data_folder+"test_"+args.data_cate
 	test_data_cate = args.data_folder+"test_"+args.data_cate
 
-	print("Loading train data of actions from {}".format(train_data_action))
-	print("Loading valid data of actions from {}".format(valid_data_action))
-	print("Loading test data of actions from {}\n".format(test_data_action))
+	message = "Loading train data of actions from {}".format(train_data_action)
+	log.addOutput2IO(message)
 
-	print("Loading train data of cate from {}".format(train_data_cate))
-	print("Loading valid data of cate from {}".format(valid_data_cate))
-	print("Loading test data of cate from {}\n".format(test_data_cate))
+	message = "Loading valid data of actions from {}".format(valid_data_action)
+	log.addOutput2IO(message)
+
+	message = "Loading test data of actions from {}\n".format(test_data_action)
+	log.addOutput2IO(message)
+	
+	message = "Loading train data of cate from {}".format(train_data_cate)
+	log.addOutput2IO(message)
+
+	message = "Loading valid data of cate from {}".format(valid_data_cate)
+	log.addOutput2IO(message)
+
+	message = "Loading test data of cate from {}\n".format(test_data_cate)
+	log.addOutput2IO(message)
 
 	data_name = args.data_name
 
-	print("*"*10)
+	message = "*"*10
+	log.addOutput2IO(message)
+
 	observed_threshold = args.test_observed
-	print("train load")
+
+	message = "train load"
+	log.addOutput2IO(message)
+
 	train_data = dataset.Dataset(train_data_action, train_data_cate, data_name, observed_threshold, window_size)
-	print("+"*10)
-	print("valid load")
+
+	message = "+"*10
+	log.addOutput2IO(message)
+	message = "valid load"
+	log.addOutput2IO(message)
+
 	valid_data = dataset.Dataset(valid_data_action, valid_data_cate, data_name, observed_threshold, window_size, itemmap=train_data.m_itemmap)
 	test_data = dataset.Dataset(test_data_action, test_data_cate, data_name, observed_threshold, window_size)
 
@@ -195,30 +221,16 @@ def main():
 
 	input_size = len(train_data.items)+1
 	output_size = input_size
-	print("input_size", input_size)
+
+	message = "input_size "+str(input_size)
+	log.addOutput2IO(message)
 
 	train_data_loader = dataset.DataLoader(train_data, batch_size)
 	
 	valid_data_loader = dataset.DataLoader(valid_data, batch_size)
 
-	# params_dataloader = {"batch_size":64, "shuffle": True, "num_workers":6}
-
-	# train_data_loader = data.DataLoader(train_data, **params_dataloader)
-	# valid_data_loader = data.DataLoader(valid_data, **params_dataloader)
-	myhost = os.uname()[1]
-	file_time = datetime.datetime.now().strftime('%H_%M_%d_%m')
-
-	output_file = myhost+"_"+file_time
-	output_file = output_file+"_"+str(hidden_size)+"_"+str(batch_size)+"_"+str(embedding_dim)+"_"+str(optimizer_type)+"_"+str(lr)+"_"+str(window_size)+"_"+str(shared_embedding)
-	output_file = output_file+"_"+str(data_name)
-	output_f = open(output_file, "w")
-	
-	# used_cuda_device = torch.device('cuda' if use_cuda else 'cpu')
-
-	# print("there are ", torch.cuda.device_count(), " GPUs")
-
 	if not args.is_eval:
-		model = GRU4REC(window_size, input_size, hidden_size, output_size,
+		model = GRU4REC(log, window_size, input_size, hidden_size, output_size,
 							final_act=final_act,
 							num_layers=num_layers,
 							use_cuda=args.cuda,
@@ -246,7 +258,7 @@ def main():
 
 		loss_function = LossFunction(loss_type=loss_type, use_cuda=args.cuda)
 
-		trainer = Trainer(model,
+		trainer = Trainer(log, model,
 							  train_data=train_data_loader,
 							  eval_data=valid_data_loader,
 							  optim=optimizer,
@@ -255,8 +267,7 @@ def main():
 							  topk = args.topk,
 							  args=args)
 
-		trainer.train(0, n_epochs - 1, batch_size, output_f)
-		output_f.close()
+		trainer.train(0, n_epochs - 1, batch_size)
 	else:
 		if args.load_model is not None:
 			print("Loading pre trained model from {}".format(args.load_model))
