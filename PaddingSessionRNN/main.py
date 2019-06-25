@@ -17,6 +17,7 @@ from trainer import *
 from torch.utils import data
 import pickle
 import sys
+import logger
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--hidden_size', default=50, type=int)
@@ -54,14 +55,15 @@ parser.add_argument('--time_sort', default=False, type=bool)
 parser.add_argument('--model_name', default='GRU4REC', type=str)
 parser.add_argument('--save_dir', default='models', type=str)
 parser.add_argument('--data_folder', default='../Data/movielen/1m/', type=str)
-parser.add_argument('--train_data', default='train_item.pickle', type=str)
-parser.add_argument('--valid_data', default='test_item.pickle', type=str)
-parser.add_argument('--test_data', default='test_item.pickle', type=str)
+parser.add_argument('--data_action', default='item.pickle', type=str)
+parser.add_argument('--data_cate', default='cate.pickle', type=str)
+parser.add_argument('--data_time', default='time.pickle', type=str)
 parser.add_argument("--is_eval", action='store_true')
 parser.add_argument('--load_model', default=None,  type=str)
 parser.add_argument('--checkpoint_dir', type=str, default='checkpoint')
 parser.add_argument('--data_name', default=None, type=str)
 parser.add_argument('--shared_embedding', default=None, type=int)
+parser.add_argument('--patience', default=1000)
 
 # Get the arguments
 args = parser.parse_args()
@@ -155,66 +157,57 @@ def main():
 	window_size = args.window_size
 
 	shared_embedding = args.shared_embedding
-	print("shared_embedding", str(shared_embedding))
+	
+	log = logger.Logger()
+
+	msg = "shared_embedding"+str(shared_embedding)
+	log.addOutput2IO(msg)
 
 	if embedding_dim == -1:
-		print("embedding dim not -1", embedding_dim)
+		msg = "embedding dim not -1 "+str(embedding_dim)
+		log.addOutput2IO(msg)
 		raise AssertionError()
 
-	train_data = args.data_folder+args.train_data
-	valid_data = args.data_folder+args.valid_data
-	test_data = args.data_folder+args.valid_data
+	train_data_action = args.data_folder+"train_"+args.data_action
+	valid_data_action = args.data_folder+"test_"+args.data_action
+	test_data_action = args.data_folder+"test_"+args.data_action
 
-	print("Loading train data from {}".format(train_data))
-	print("Loading valid data from {}".format(valid_data))
-	print("Loading test data from {}\n".format(test_data))
+	msg = "Loading train data from {}".format(train_data_action)
+	log.addOutput2IO(msg)
+	msg = "Loading valid data from {}".format(valid_data_action)
+	log.addOutput2IO(msg)
+	msg = "Loading test data from {}\n".format(test_data_action)
+	log.addOutput2IO(msg)
 
 	data_name = args.data_name
 
 	print("*"*10)
-	observed_threshold = args.test_observed
 	print("train load")
-	train_data = dataset.Dataset(train_data, data_name, observed_threshold, window_size)
+
+	observed_threshold = args.test_observed
+
+	train_data = dataset.Dataset(train_data_action, observed_threshold, window_size)
 	print("+"*10)
 	print("valid load")
-	valid_data = dataset.Dataset(valid_data, data_name, observed_threshold, window_size, itemmap=train_data.m_itemmap)
-	test_data = dataset.Dataset(test_data, data_name, observed_threshold, window_size)
 
-	# debug_train_data_name = args.data_folder+"train_"+args.data_name+"_"+str(args.window_size)
-	# debug_valid_data_name = args.data_folder+"valid_"+args.data_name+"_"+str(args.window_size)
-	# debug_test_data_name = args.data_folder+"test_"+args.data_name+"_"+str(args.window_size)
-	
-	# save_data2pickle(train_data, debug_train_data_name, "train")
-	# save_data2pickle(valid_data, debug_valid_data_name, "valid")
-	# save_data2pickle(test_data, debug_test_data_name, "test")
-
-	# exit()
+	valid_data = dataset.Dataset(valid_data_action, observed_threshold, window_size, itemmap=train_data.m_itemmap)
+	test_data = dataset.Dataset(test_data_action, observed_threshold, window_size)
 
 	if not args.is_eval:
 		make_checkpoint_dir()
 
 	input_size = len(train_data.items)+1
 	output_size = input_size
-	# print("input_size", input_size)
+
+	message = "input_size "+str(input_size)
+	log.addOutput2IO(message)
 
 	train_data_loader = dataset.DataLoader(train_data, batch_size)
 	
 	valid_data_loader = dataset.DataLoader(valid_data, batch_size)
-
-	# params_dataloader = {"batch_size":64, "shuffle": True, "num_workers":6}
-
-	# train_data_loader = data.DataLoader(train_data, **params_dataloader)
-	# valid_data_loader = data.DataLoader(valid_data, **params_dataloader)
-	myhost = os.uname()[1]
-	file_time = datetime.datetime.now().strftime('%H_%M_%d_%m')
-
-	output_file = myhost+"_"+file_time
-	output_file = output_file+"_"+str(hidden_size)+"_"+str(batch_size)+"_"+str(embedding_dim)+"_"+str(optimizer_type)+"_"+str(lr)+"_"+str(window_size)+"_"+str(shared_embedding)
-	output_file = output_file+"_"+str(data_name)
-	output_f = open(output_file, "w")
-
+	
 	if not args.is_eval:
-		model = GRU4REC(window_size, input_size, hidden_size, output_size,
+		model = GRU4REC(log, window_size, input_size, hidden_size, output_size,
 							final_act=final_act,
 							num_layers=num_layers,
 							use_cuda=args.cuda,
@@ -241,7 +234,7 @@ def main():
 
 		loss_function = LossFunction(loss_type=loss_type, use_cuda=args.cuda)
 
-		trainer = Trainer(model,
+		trainer = Trainer(log, model,
 							  train_data=train_data_loader,
 							  eval_data=valid_data_loader,
 							  optim=optimizer,
@@ -250,8 +243,7 @@ def main():
 							  topk = args.topk,
 							  args=args)
 
-		trainer.train(0, n_epochs - 1, batch_size, output_f)
-		output_f.close()
+		trainer.train(0, n_epochs - 1, batch_size)
 	else:
 		if args.load_model is not None:
 			print("Loading pre trained model from {}".format(args.load_model))

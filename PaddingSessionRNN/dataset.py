@@ -8,55 +8,22 @@ import random
 
 class Dataset(object):
 
-	def __init__(self, itemFile, data_name, observed_threshold, window_size, itemmap=None):
-		data_file = open(itemFile, "rb")
+	def __init__(self, action_file, observed_threshold, window_size, itemmap=None):
+		action_f = open(action_file, "rb")
 
 		self.m_itemmap = {}
 
 		action_seq_arr_total = None
-		data_seq_arr = pickle.load(data_file)
-
-		if data_name == "movielen_itemmap":
-			action_seq_arr_total = data_seq_arr['action_list']
-			itemmap = data_seq_arr['itemmap']
-
-		if data_name == "movielen":
-			action_seq_arr_total = data_seq_arr
-
-		if data_name == "xing":
-			action_seq_arr_total = data_seq_arr
-
-		if data_name == "taobao":
-			action_seq_arr_total = data_seq_arr
+		action_seq_arr_total = pickle.load(action_f)
 
 		seq_num = len(action_seq_arr_total)
 		print("seq num", seq_num)
 
-		# self.m_seq_list = []
-
-		self.m_input_action_seq_list = []
+		self.m_input_seq_list = []
 		self.m_target_action_seq_list = []
 		self.m_input_seq_idx_list = []
 
 		print("loading item map")
-		
-		# for seq_index in range(seq_num):
-		# 	action_seq_arr = action_seq_arr_total[seq_index]
-
-		# 	action_num_seq = len(action_seq_arr)
-
-		# 	action_seq_list = []
-
-		# 	for action_index in range(action_num_seq):
-		# 		item = action_seq_arr[action_index]
-
-		# 		action_seq_list.append(item)
-
-		# 		if item not in self.m_itemmap:
-		# 			item_id = len(self.m_itemmap)
-		# 			self.m_itemmap[item] = item_id
-
-		# 	self.m_seq_list.append(action_seq_list)
 
 		print("finish loading item map")
 		print("observed_threshold", observed_threshold, window_size)
@@ -87,7 +54,7 @@ class Dataset(object):
 					
 					# input_sub_seq.append(action_seq_arr[action_index-1])
 					target_sub_seq = action_seq_arr[action_index]
-					self.m_input_action_seq_list.append(input_sub_seq)
+					self.m_input_seq_list.append(input_sub_seq)
 					self.m_target_action_seq_list.append(target_sub_seq)
 					self.m_input_seq_idx_list.append(action_index)
 
@@ -98,16 +65,16 @@ class Dataset(object):
 					# 	random.shuffle(input_sub_seq)
 					# input_sub_seq.append(action_seq_arr[action_index-1])
 					target_sub_seq = action_seq_arr[action_index]
-					self.m_input_action_seq_list.append(input_sub_seq)
+					self.m_input_seq_list.append(input_sub_seq)
 					self.m_target_action_seq_list.append(target_sub_seq)
 					self.m_input_seq_idx_list.append(action_index)
 
 	
 	def __len__(self):
-		return len(self.m_input_action_seq_list)
+		return len(self.m_input_seq_list)
 
 	def __getitem__(self, index):
-		x = self.m_input_action_seq_list[index]
+		x = self.m_input_seq_list[index]
 		y = self.m_target_action_seq_list[index]
 
 		x = np.array(x)
@@ -131,7 +98,7 @@ class DataLoader():
 	def __iter__(self):
 		
 		print("shuffling")
-		temp = list(zip(self.m_dataset.m_input_action_seq_list, self.m_dataset.m_target_action_seq_list, self.m_dataset.m_input_seq_idx_list))
+		temp = list(zip(self.m_dataset.m_input_seq_list, self.m_dataset.m_target_action_seq_list, self.m_dataset.m_input_seq_idx_list))
 		random.shuffle(temp)
 		
 		input_action_seq_list, target_action_seq_list, input_seq_idx_list = zip(*temp)
