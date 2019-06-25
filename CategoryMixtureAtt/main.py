@@ -9,7 +9,8 @@ import torch
 import numpy as np
 import os
 import datetime
-from dataset import *
+from dataset_time_cut import *
+# from dataset import *
 from loss import *
 from model import *
 from optimizer import *
@@ -57,7 +58,7 @@ parser.add_argument('--save_dir', default='models', type=str)
 parser.add_argument('--data_folder', default='../Data/movielen/1m/', type=str)
 parser.add_argument('--data_action', default='item.pickle', type=str)
 parser.add_argument('--data_cate', default='cate.pickle', type=str)
-
+parser.add_argument('--data_time', default='time.pickle', type=str)
 # parser.add_argument('--valid_data', default='test_item.pickle', type=str)
 # parser.add_argument('--test_data', default='test_item.pickle', type=str)
 parser.add_argument("--is_eval", action='store_true')
@@ -65,7 +66,7 @@ parser.add_argument('--load_model', default=None,  type=str)
 parser.add_argument('--checkpoint_dir', type=str, default='checkpoint')
 parser.add_argument('--data_name', default=None, type=str)
 parser.add_argument('--shared_embedding', default=None, type=int)
-parser.add_argument('--patience', default=10, type=int)
+parser.add_argument('--patience', default=1000, type=int)
 
 # Get the arguments
 args = parser.parse_args()
@@ -180,44 +181,27 @@ def main():
 
 	message = "Loading train data of actions from {}".format(train_data_action)
 	log.addOutput2IO(message)
-
 	message = "Loading valid data of actions from {}".format(valid_data_action)
 	log.addOutput2IO(message)
-
 	message = "Loading test data of actions from {}\n".format(test_data_action)
 	log.addOutput2IO(message)
-	
 	message = "Loading train data of cate from {}".format(train_data_cate)
 	log.addOutput2IO(message)
-
 	message = "Loading valid data of cate from {}".format(valid_data_cate)
 	log.addOutput2IO(message)
-
 	message = "Loading test data of cate from {}\n".format(test_data_cate)
 	log.addOutput2IO(message)
 
-	data_name = args.data_name
-
 	message = "*"*10
+	log.addOutput2IO(message)
+	message = "train load, valid, test load"
 	log.addOutput2IO(message)
 
 	observed_threshold = args.test_observed
-
-	message = "train load"
-	log.addOutput2IO(message)
-
-	train_data = dataset.Dataset(train_data_action, train_data_cate, data_name, observed_threshold, window_size)
-
-	message = "+"*10
-	log.addOutput2IO(message)
-	message = "valid load"
-	log.addOutput2IO(message)
-
-	valid_data = dataset.Dataset(valid_data_action, valid_data_cate, data_name, observed_threshold, window_size, itemmap=train_data.m_itemmap)
-	test_data = dataset.Dataset(test_data_action, test_data_cate, data_name, observed_threshold, window_size)
-
-	if not args.is_eval:
-		make_checkpoint_dir()
+	
+	train_data = dataset.Dataset(train_data_action, train_data_cate, observed_threshold, window_size)
+	valid_data = dataset.Dataset(valid_data_action, valid_data_cate, observed_threshold, window_size, itemmap=train_data.m_itemmap)
+	test_data = dataset.Dataset(test_data_action, test_data_cate, observed_threshold, window_size)
 
 	input_size = len(train_data.items)+1
 	output_size = input_size
@@ -226,8 +210,10 @@ def main():
 	log.addOutput2IO(message)
 
 	train_data_loader = dataset.DataLoader(train_data, batch_size)
-	
 	valid_data_loader = dataset.DataLoader(valid_data, batch_size)
+
+	if not args.is_eval:
+		make_checkpoint_dir()
 
 	if not args.is_eval:
 		model = GRU4REC(log, window_size, input_size, hidden_size, output_size,

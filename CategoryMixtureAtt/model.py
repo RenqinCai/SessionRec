@@ -135,10 +135,6 @@ class GRU4REC(nn.Module):
 
         mixture_output = sum_input_seq_cate+output_short
 
-        ### debug: if output only comes from short
-        # mixture_output = output_short
-        # print("mixture_output", mixture_output)
-
         output = F.linear(mixture_output, self.out_matrix)
         
         logit = output

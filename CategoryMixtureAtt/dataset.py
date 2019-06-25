@@ -8,7 +8,7 @@ import random
 
 class Dataset(object):
 
-	def __init__(self, action_file, cate_file, data_name, observed_threshold, window_size, itemmap=None):
+	def __init__(self, action_file, cate_file, observed_threshold, window_size, itemmap=None):
 		action_f = open(action_file, "rb")
 
 		self.m_itemmap = {}
@@ -82,9 +82,6 @@ class Dataset(object):
 
 				if action_index <= window_size:
 					subseq = action_seq_arr[:action_index]
-
-					# action_list_sub_seq.append(subseq)
-					# actionNum_list_sub_seq.append(action_index)
 					
 					self.m_input_seq_list.append(subseq)
 					self.m_input_seqLen_list.append(action_index)
@@ -220,6 +217,9 @@ class DataLoader():
 			max_actionNum_cate_batch = max(actionNum_cate_batch)
 			max_subseqNum_cate_batch = max(subseqNum_cate_batch)
 			
+			if type(max_actionNum_cate_batch) is list:
+				print("max_actionNum_cate_batch", max_actionNum_cate_batch, actionNum_cate_batch)
+			# print("max_actionNum_cate_batch", max_actionNum_cate_batch)
 			# print("max_subseqNum_cate_batch", max_subseqNum_cate_batch)
 
 			mask_cate_batch = None
