@@ -64,8 +64,11 @@ class Data(object):
 		print("observed_threshold", observed_threshold, window_size)
 		print("loading data")
 
-		time_threshold = 1512000000
-		print("time_threshold", time_threshold)
+		# time_threshold = 1512000000
+		valid_start_time = 1512172800
+		test_start_time = 1512259200
+		print("valid_start_time", valid_start_time)
+		print("test start time", test_start_time)
 		# seq_num = 1
 		for seq_index in range(action_seq_num):
 			# print("*"*10, "seq index", seq_index, "*"*10)
@@ -92,7 +95,7 @@ class Data(object):
 				cate_cur = cate_seq_arr[action_index]
 				time_cur = time_seq_arr[action_index]
 
-				if time_cur <= time_threshold:
+				if time_cur <= valid_start_time:
 					if item_cur not in self.m_itemmap:
 						item_id_cur = len(self.m_itemmap)
 						self.m_itemmap[item_cur] = item_id_cur
@@ -111,11 +114,12 @@ class Data(object):
 					continue
 
 				### train data
-				if time_cur <= time_threshold:
+				if time_cur <= valid_start_time:
 					self.addItem2train(action_index, window_size, action_seq_arr, cate_action_list_map_user)
 
-				if time_cur > time_threshold:
-					self.addItem2test(action_index, window_size, action_seq_arr, cate_action_list_map_user)
+				if time_cur > valid_start_time:
+					if time_cur <= test_start_time:
+						self.addItem2test(action_index, window_size, action_seq_arr, cate_action_list_map_user)
 				### test data
 
 				cate_cur = cate_seq_arr[action_index]

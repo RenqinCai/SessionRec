@@ -163,7 +163,7 @@ def main():
 	log.addIOWriter(args)
 
 	shared_embedding = args.shared_embedding
-	message = "shared_embedding: "+str(shared_embedding)
+	message = "main.py shared_embedding: "+str(shared_embedding)
 	log.addOutput2IO(message)
 
 	if embedding_dim == -1:

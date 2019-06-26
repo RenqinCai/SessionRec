@@ -22,7 +22,7 @@ class Logger():
 		data_name = args.data_name
 
 		output_file = output_file+"_"+str(hidden_size)+"_"+str(batch_size)+"_"+str(embedding_dim)+"_"+str(optimizer_type)+"_"+str(lr)+"_"+str(window_size)+"_"+str(shared_embedding)
-
+		print("output_file", output_file)
 		output_file = output_file+"_"+str(data_name)
 		self.m_io_writer = open(output_file, "w")
 

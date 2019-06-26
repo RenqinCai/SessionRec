@@ -142,34 +142,13 @@ def main():
 	log.addIOWriter(args)
 
 	shared_embedding = args.shared_embedding
-	message = "shared_embedding: "+str(shared_embedding)
+	message = "main_time.py shared_embedding: "+str(shared_embedding)
 	log.addOutput2IO(message)
 
 	if embedding_dim == -1:
 		message = "embedding dim not -1 "+str(embedding_dim)
 		log.addOutput2IO(message)
 		raise AssertionError()
-
-	train_data_action = args.data_folder+"train_"+args.data_action
-	valid_data_action = args.data_folder+"test_"+args.data_action
-	test_data_action = args.data_folder+"test_"+args.data_action
-
-	train_data_cate = args.data_folder+"train_"+args.data_cate
-	valid_data_cate = args.data_folder+"test_"+args.data_cate
-	test_data_cate = args.data_folder+"test_"+args.data_cate
-
-	message = "Loading train data of actions from {}".format(train_data_action)
-	log.addOutput2IO(message)
-	message = "Loading valid data of actions from {}".format(valid_data_action)
-	log.addOutput2IO(message)
-	message = "Loading test data of actions from {}\n".format(test_data_action)
-	log.addOutput2IO(message)
-	message = "Loading train data of cate from {}".format(train_data_cate)
-	log.addOutput2IO(message)
-	message = "Loading valid data of cate from {}".format(valid_data_cate)
-	log.addOutput2IO(message)
-	message = "Loading test data of cate from {}\n".format(test_data_cate)
-	log.addOutput2IO(message)
 
 	message = "*"*10
 	log.addOutput2IO(message)
@@ -185,8 +164,8 @@ def main():
 	train_data = data_obj.train_dataset
 	valid_data = data_obj.test_dataset
 	test_data = data_obj.test_dataset
-
-    input_size = len(data_obj.items)+1
+	
+	input_size = len(data_obj.items)+1
 	output_size = input_size
 
 	message = "input_size "+str(input_size)

@@ -89,7 +89,7 @@ class Dataset(object):
 					# subseq_num += 1
 					# print("cate action map", cate_action_list_map_user)
 					for cate in cate_action_list_map_user:
-						subseq_cate = cate_action_list_map_user[cate].copy()[:5]
+						subseq_cate = cate_action_list_map_user[cate].copy()[-window_size:]
 						actionNum_subseq_cate = len(subseq_cate)
 
 						action_list_sub_seq.append(subseq_cate)
@@ -116,7 +116,7 @@ class Dataset(object):
 
 					# print("cate action map", cate_action_list_map_user)
 					for cate in cate_action_list_map_user:
-						subseq_cate = cate_action_list_map_user[cate].copy()[:5]
+						subseq_cate = cate_action_list_map_user[cate].copy()[-window_size:]
 						actionNum_subseq_cate = len(subseq_cate)
 
 						action_list_sub_seq.append(subseq_cate)
