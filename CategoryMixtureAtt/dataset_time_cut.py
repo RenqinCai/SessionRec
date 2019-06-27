@@ -158,7 +158,12 @@ class Data(object):
 		
 		subseq_num = 0
 
-		subseq = action_seq_arr[-window_size:]
+		subseq = None
+		if action_index <= window_size:
+			subseq = action_seq_arr[:action_index]
+		else:
+			subseq = action_seq_arr[action_index-window_size:action_index]
+
 		self.m_input_seq_list_train.append(subseq)
 
 		actionNum_subseq = len(subseq)
@@ -187,7 +192,12 @@ class Data(object):
 	def addItem2test(self, action_index, window_size, action_seq_arr, cate_action_list_map_user):
 		subseq_num = 0
 
-		subseq = action_seq_arr[-window_size:]
+		subseq = None
+		if action_index <= window_size:
+			subseq = action_seq_arr[:action_index]
+		else:
+			subseq = action_seq_arr[action_index-window_size:action_index]
+
 		self.m_input_seq_list_test.append(subseq)
 
 		actionNum_subseq = len(subseq)
