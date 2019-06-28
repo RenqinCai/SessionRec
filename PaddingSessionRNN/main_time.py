@@ -19,7 +19,7 @@ from torch.utils import data
 import pickle
 import sys
 from dataset_time_cut import *
-import logger
+from logger import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--hidden_size', default=50, type=int)
@@ -32,7 +32,7 @@ parser.add_argument('--dropout_hidden', default=.2, type=float)
 parser.add_argument('--optimizer_type', default='Adagrad', type=str)
 parser.add_argument('--final_act', default='tanh', type=str)
 parser.add_argument('--lr', default=.05, type=float)
-parser.add_argument('--weight_decay', default=0, type=float)
+parser.add_argument('--weight_decay', default=0.001, type=float)
 parser.add_argument('--momentum', default=0.1, type=float)
 parser.add_argument('--eps', default=1e-6, type=float)
 
@@ -115,6 +115,7 @@ def count_parameters(model):
 	print("parameter_num", parameter_num) 
 
 def main():
+
 	hidden_size = args.hidden_size
 	num_layers = args.num_layers
 	batch_size = args.batch_size
@@ -137,9 +138,11 @@ def main():
 	window_size = args.window_size
 	shared_embedding = args.shared_embedding
 
-	log = logger.Logger()
+	log = Logger()
+	log.addIOWriter(args)
 
-	msg = "shared_embedding"+str(shared_embedding)
+	msg = "main_time.py "
+	msg += "shared_embedding"+str(shared_embedding)
 	log.addOutput2IO(msg)
 
 	if embedding_dim == -1:

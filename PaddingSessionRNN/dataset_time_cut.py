@@ -9,11 +9,12 @@ import random
 class Data(object):
 
 	def __init__(self, action_file, cate_file, time_file, observed_threshold, window_size):
-		action_f = open(action_file, "rb")
+		
 
 		self.m_itemmap = {}
 		self.m_catemap = {}
 
+		action_f = open(action_file, "rb")
 		action_seq_arr_total = pickle.load(action_f)
 
 		cate_f = open(cate_file, "rb")
@@ -63,8 +64,10 @@ class Data(object):
 		print("observed_threshold", observed_threshold, window_size)
 		print("loading data")
 
-		time_threshold = 1512000000
-		print("time_threshold", time_threshold)
+		valid_start_time = 1512172800
+		test_start_time = 1512259200
+		print("valid valid_start_time", valid_start_time)
+		print("test test_start_time", test_start_time)
 		# seq_num = 1
 		for seq_index in range(action_seq_num):
 			# print("*"*10, "seq index", seq_index, "*"*10)
@@ -90,7 +93,7 @@ class Data(object):
 				cate_cur = cate_seq_arr[action_index]
 				time_cur = time_seq_arr[action_index]
 
-				if time_cur <= time_threshold:
+				if time_cur <= valid_start_time:
 					if item_cur not in self.m_itemmap:
 						item_id_cur = len(self.m_itemmap)
 						self.m_itemmap[item_cur] = item_id_cur
@@ -99,11 +102,12 @@ class Data(object):
 					continue
 
 				### train data
-				if time_cur <= time_threshold:
+				if time_cur <= valid_start_time:
 					self.addItem2train(action_index, window_size, action_seq_arr)
 
-				if time_cur > time_threshold:
-					self.addItem2test(action_index, window_size, action_seq_arr)
+				if time_cur > valid_start_time:
+					if time_cur <= test_start_time:
+						self.addItem2test(action_index, window_size, action_seq_arr)
 				### test data
 
 		# print("debug", self.m_input_subseq_list_seq_list[:10])
@@ -129,8 +133,13 @@ class Data(object):
 		pickle.dump(dataset_pickle, f)
 
 	def addItem2train(self, action_index, window_size, action_seq_arr):
-		
-		subseq = action_seq_arr[-window_size:]
+
+		subseq = None
+		if action_index <= window_size:
+			subseq = action_seq_arr[:action_index]
+		else:
+			subseq = action_seq_arr[action_index-window_size:action_index]
+
 		self.m_input_seq_list_train.append(subseq)
 
 		actionNum_subseq = len(subseq)
@@ -141,8 +150,12 @@ class Data(object):
 		self.m_input_seq_idx_list_train.append(action_index)
 
 	def addItem2test(self, action_index, window_size, action_seq_arr):
-
-		subseq = action_seq_arr[-window_size:]
+		subseq = None
+		if action_index <= window_size:
+			subseq = action_seq_arr[:action_index]
+		else:
+			subseq = action_seq_arr[action_index-window_size:action_index]
+		
 		self.m_input_seq_list_test.append(subseq)
 
 		actionNum_subseq = len(subseq)
