@@ -32,7 +32,7 @@ parser.add_argument('--dropout_hidden', default=.2, type=float)
 parser.add_argument('--optimizer_type', default='Adagrad', type=str)
 parser.add_argument('--final_act', default='tanh', type=str)
 parser.add_argument('--lr', default=.05, type=float)
-parser.add_argument('--weight_decay', default=0.001, type=float)
+parser.add_argument('--weight_decay', default=0.0, type=float)
 parser.add_argument('--momentum', default=0.1, type=float)
 parser.add_argument('--eps', default=1e-6, type=float)
 

@@ -23,7 +23,7 @@ class GRU4REC(nn.Module):
         self.create_final_activation(final_act)
 
         self.look_up = nn.Embedding(input_size, self.embedding_dim).to(self.device)
-        self.gru = nn.GRU(self.embedding_dim, self.hidden_size, self.num_layers, dropout=self.dropout_hidden)
+        self.gru = nn.GRU(self.embedding_dim, self.hidden_size, self.num_layers, dropout=self.dropout_hidden, batch_first=True)
   
         if shared_embedding:
             msg = "share embedding"
@@ -55,17 +55,17 @@ class GRU4REC(nn.Module):
         embedded = input
         embedded = self.look_up(embedded)
     
-        embedded = embedded.transpose(0, 1)
+        # embedded = embedded.transpose(0, 1)
 
-        embedded_pad = torch.nn.utils.rnn.pack_padded_sequence(embedded, input_len)
+        embedded_pad = torch.nn.utils.rnn.pack_padded_sequence(embedded, input_len, batch_first=True)
         output, hidden = self.gru(embedded_pad, hidden) # (sequence, B, H)
 
         last_output = hidden[-1]
 
         last_output = last_output.view(-1, last_output.size(-1))  # (B,H)
         output = F.linear(last_output, self.out_matrix)
-#         logit = self.final_activation(output) ## (B, output_size)
-        logit = output
+        logit = self.final_activation(output) ## (B, output_size)
+        # logit = output
         return logit, hidden
 
 
