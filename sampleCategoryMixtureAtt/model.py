@@ -5,7 +5,7 @@ import numpy as np
 from torch.nn.utils.rnn import pad_sequence
 
 class GRU4REC(nn.Module):
-    def __init__(self, log, window_size, input_size, hidden_size, output_size, num_layers=1, final_act='tanh', dropout_hidden=.8, dropout_input=0, batch_size=50, embedding_dim=-1, use_cuda=False, shared_embedding=True):
+    def __init__(self, log, window_size, input_size, hidden_size, output_size, ss, num_layers=1, final_act='tanh', dropout_hidden=.8, dropout_input=0, batch_size=50, embedding_dim=-1, use_cuda=False, shared_embedding=True):
         super(GRU4REC, self).__init__()
         self.m_log = log
         self.input_size = input_size
@@ -28,13 +28,14 @@ class GRU4REC(nn.Module):
         self.look_up = nn.Embedding(input_size, self.embedding_dim).to(self.device)
         self.m_cate_gru = nn.GRU(self.embedding_dim, self.hidden_size, self.num_layers, dropout=self.dropout_hidden, batch_first=True)
         self.m_short_gru = nn.GRU(self.embedding_dim, self.hidden_size, self.num_layers, dropout=self.dropout_hidden, batch_first=True)
+        self.m_ss = ss
 
         if shared_embedding:
-           
             message = "share embedding"
             self.m_log.addOutput2IO(message)
 
-            self.h2o.weight.data = self.look_up.weight.data
+            ss.params.weight = self.look_up.weight
+            # self.h2o.weight.data = self.look_up.weight.data
            
         self = self.to(self.device)
 
@@ -52,7 +53,7 @@ class GRU4REC(nn.Module):
         elif final_act.startswith('leaky-'):
             self.final_activation = nn.LeakyReLU(negative_slope=float(final_act.split('-')[1]))
 
-    def forward(self, input_cate_batch, mask_cate_batch, mask_cate_seq_batch, max_actionNum_cate_batch, max_subseqNum_cate_batch, subseqLen_cate_batch, seqLen_cate_batch, input_batch, mask_batch, seqLen_batch, train_test_flag):
+    def forward(self, input_cate_batch, mask_cate_batch, mask_cate_seq_batch, max_actionNum_cate_batch, max_subseqNum_cate_batch, subseqLen_cate_batch, seqLen_cate_batch, input_batch, mask_batch, seqLen_batch, target_y_batch, train_test_flag):
 
         embedded_cate = input_cate_batch
         embedded_cate = self.look_up(embedded_cate)
@@ -121,11 +122,9 @@ class GRU4REC(nn.Module):
         fc_output = self.fc(mixture_output)
         # mixture_output = sum_input_seq_cate+output_short
 
-        output = self.h2o(fc_output)
+        logits, new_targets = self.m_ss(fc_output, target_y_batch)
 
-        logit = output
-
-        return logit
+        return logits, new_targets
 
     def embedding_dropout(self, input):
         p_drop = torch.Tensor(input.size(0), input.size(1), 1).fill_(1 - self.dropout_input)  # (B,1)

@@ -33,7 +33,7 @@ class Evaluation(object):
 		with torch.no_grad():
 			total_test_num = []
 
-			for x_cate_batch, mask_cate, mask_cate_seq, max_acticonNum_cate, max_subseqNum_cate, subseqLen_cate, seqLen_cate, x_batch, mask_batch, seqLen_batch, y_batch, neg_y_batch, idx_batch in dataloader:
+			for x_cate_batch, mask_cate, mask_cate_seq, max_acticonNum_cate, max_subseqNum_cate, subseqLen_cate, seqLen_cate, x_batch, mask_batch, seqLen_batch, y_batch, idx_batch in dataloader:
 				x_cate_batch = x_cate_batch.to(self.device)
 				mask_cate = mask_cate.to(self.device)
 				mask_cate_seq = mask_cate_seq.to(self.device)
@@ -46,26 +46,19 @@ class Evaluation(object):
 				
 				# hidden = self.model.init_hidden()
 
-				st = datetime.datetime.now()
+				# st = datetime.datetime.now()
 
-				logit_batch = self.model(x_cate_batch, mask_cate, mask_cate_seq, max_acticonNum_cate, max_subseqNum_cate, subseqLen_cate, seqLen_cate, x_batch, mask_batch, seqLen_batch, "test")
+				logit_batch, target_batch = self.model(x_cate_batch, mask_cate, mask_cate_seq, max_acticonNum_cate, max_subseqNum_cate, subseqLen_cate, seqLen_cate, x_batch, mask_batch, seqLen_batch, y_batch, "test")
 
-				et_0 = datetime.datetime.now()
-				print("model duration", et_0-st)
+				# et_0 = datetime.datetime.now()
+				# print("model duration", et_0-st)
 				
-				neg_y_batch = neg_y_batch.to(self.device)
-				first_dim_index = torch.arange(neg_y_batch.size(0)).to(self.device)
-				first_dim_index = first_dim_index.reshape(-1, 1)
-				logit_negSampled_batch = logit_batch[first_dim_index, neg_y_batch]
-				logit_target_batch = logit_batch[first_dim_index, y_batch.reshape(-1, 1)]
-
-				# logit_sampled_batch = logit_batch[:, y_batch.view(-1)]
-				loss_batch = self.loss_func(logit_target_batch, logit_negSampled_batch, y_batch)
+				loss_batch = self.loss_func(logit_batch, target_batch)
 
 				losses.append(loss_batch.item())
 
-				et_1 = datetime.datetime.now()
-				print("loss time", et_1-et_0)
+				# et_1 = datetime.datetime.now()
+				# print("loss time", et_1-et_0)
 
 				recall_batch, mrr_batch = evaluate(logit_batch, y_batch, warm_start_mask, k=self.topk)
 
@@ -75,8 +68,8 @@ class Evaluation(object):
 
 				total_test_num.append(y_batch.view(-1).size(0))
 
-				et_2 = datetime.datetime.now()
-				print("evaluate duration", et_2-et_1)
+				# et_2 = datetime.datetime.now()
+				# print("evaluate duration", et_2-et_1)
 
 		mean_losses = np.mean(losses)
 		mean_recall = np.average(recalls, weights=weights)

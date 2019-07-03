@@ -316,7 +316,7 @@ class DataLoader():
 			y_batch = np.array(y_batch)
 			idx_batch = np.array(idx_batch)
 
-			y_neg_batch = self.generateNegSample(y_batch, pop, self.m_negative_num)
+			# y_neg_batch = self.generateNegSample(y_batch, pop, self.m_negative_num)
 
 			x_batch_tensor = torch.from_numpy(x_batch)
 			mask_batch_tensor = torch.from_numpy(mask_batch*1)
@@ -324,7 +324,7 @@ class DataLoader():
 			x_cate_batch_tensor = torch.from_numpy(x_cate_batch)
 			y_batch_tensor = torch.from_numpy(y_batch)
 
-			y_neg_batch_tensor = torch.from_numpy(y_neg_batch)
+			# y_neg_batch_tensor = torch.from_numpy(y_neg_batch)
 
 			mask_cate_batch_tensor = torch.from_numpy(mask_cate_batch*1).float()
 			mask_cate_seq_batch_tensor = torch.from_numpy(mask_cate_seq_batch*1).float()
@@ -334,7 +334,9 @@ class DataLoader():
 			pad_subseqLen_cate_batch = np.array([i-1 if i > 0 else 0 for i in subseqLen_cate_batch])
 			pad_seqLen_batch = np.array([i-1 if i > 0 else 0 for i in seqLen_batch])
 
-			yield x_cate_batch_tensor, mask_cate_batch_tensor, mask_cate_seq_batch_tensor, max_actionNum_cate_batch, max_subseqNum_cate_batch, pad_subseqLen_cate_batch, seqLen_cate_batch, x_batch_tensor, mask_batch_tensor, pad_seqLen_batch, y_batch_tensor, y_neg_batch_tensor, idx_batch_tensor
+			yield x_cate_batch_tensor, mask_cate_batch_tensor, mask_cate_seq_batch_tensor, max_actionNum_cate_batch, max_subseqNum_cate_batch, pad_subseqLen_cate_batch, seqLen_cate_batch, x_batch_tensor, mask_batch_tensor, pad_seqLen_batch, y_batch_tensor, idx_batch_tensor
+
+			# yield x_cate_batch_tensor, mask_cate_batch_tensor, mask_cate_seq_batch_tensor, max_actionNum_cate_batch, max_subseqNum_cate_batch, pad_subseqLen_cate_batch, seqLen_cate_batch, x_batch_tensor, mask_batch_tensor, pad_seqLen_batch, y_batch_tensor, y_neg_batch_tensor, idx_batch_tensor
 
 	def generateNegSample(self, y_batch, pop, negative_sample_num):
 		neg_sample_batch = np.searchsorted(pop, np.random.rand(negative_sample_num*y_batch.shape[0]))

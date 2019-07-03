@@ -20,6 +20,7 @@ from torch.utils import data
 import pickle
 import sys
 import logger
+import torch.nn as nn
 
 import sys
 sys.path.insert(0, '../PyTorch_GBW_LM')
@@ -196,7 +197,9 @@ def main():
 		make_checkpoint_dir()
 
 	if not args.is_eval:
-		model = GRU4REC(log, window_size, input_size, hidden_size, output_size,
+		ss = SampledSoftmax(output_size, negative_num, embedding_dim, None)
+
+		model = GRU4REC(log, window_size, input_size, hidden_size, output_size, ss,
 							final_act=final_act,
 							num_layers=num_layers,
 							use_cuda=args.cuda,
@@ -206,8 +209,8 @@ def main():
 							embedding_dim=embedding_dim, 
 							shared_embedding=shared_embedding
 							)
-		# model = model.to(used_cuda_device)
-
+		# model = nn.DataParallel(model)
+		
 		# init weight
 		# See Balazs Hihasi(ICLR 2016), pg.7
 		

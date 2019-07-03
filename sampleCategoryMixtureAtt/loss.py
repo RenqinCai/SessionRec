@@ -22,8 +22,8 @@ class LossFunction(nn.Module):
         else:
             raise NotImplementedError
 
-    def forward(self, logit_pos, logit_neg, target):
-        return self._loss_fn(logit_pos, logit_neg, target)
+    def forward(self, logit, target):
+        return self._loss_fn(logit, target)
 
 class SampledCrossEntropyLoss(nn.Module):
     """ CrossEntropyLoss with n_classes = batch_size = the number of samples in the session-parallel mini-batch """
@@ -38,21 +38,9 @@ class SampledCrossEntropyLoss(nn.Module):
         self.xe_loss = nn.CrossEntropyLoss()
         self.use_cuda = use_cuda
 
-    def forward(self, logit_pos, logit_neg, target):
-        epsilon = 1e-20
-
-        logit = torch.cat((logit_pos, logit_neg), dim=-1)
-
-        pred = F.softmax(logit+epsilon, dim=1)
-
-        return -pred[:, 0].log().mean()
-        # return -F.log(pred[:, 0])
-        # target = torch.zeros(target.size(0)).long()
-       
-        # if self.use_cuda: target = target.cuda()
-
-        # return self.xe_loss(pred, target)
-
+    def forward(self, logit, target):
+    
+        return self.xe_loss(logit.view(target.size(0), -1), target)
 
 class BPRLoss(nn.Module):
     def __init__(self):
@@ -61,7 +49,7 @@ class BPRLoss(nn.Module):
         """
         super(BPRLoss, self).__init__()
 
-    def forward(self, logit_pos, logit_neg, target):
+    def forward(self, logit, target):
         """
         Args:
             logit (BxB): Variable that stores the logits for the items in the mini-batch
@@ -70,12 +58,11 @@ class BPRLoss(nn.Module):
         """
 
         # differences between the item scores
-        diff = logit_pos.view(-1, 1).expand_as(logit_neg) - logit_neg
+        diff = logit.diag().view(-1, 1).expand_as(logit) - logit
         # final loss
         loss = -torch.mean(F.logsigmoid(diff))
 
         return loss
-
 
 # class BPR_max(nn.Module):
 #     def __init__(self):

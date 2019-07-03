@@ -40,6 +40,7 @@ class Trainer(object):
         torch.save(checkpoint, model_name)
 
     def train(self, start_epoch, end_epoch, batch_size, start_time=None):
+
         if start_time is None:
             self.start_time = time.time()
         else:
@@ -97,13 +98,10 @@ class Trainer(object):
             return hidden
        
         dataloader = self.train_data
-        for x_cate_batch, mask_cate, mask_cate_seq, max_acticonNum_cate, max_subseqNum_cate, subseqLen_cate, seqLen_cate, x_batch, mask_batch, seqLen_batch, y_batch, neg_y_batch, _ in dataloader:
+        for x_cate_batch, mask_cate, mask_cate_seq, max_acticonNum_cate, max_subseqNum_cate, subseqLen_cate, seqLen_cate, x_batch, mask_batch, seqLen_batch, y_batch, _ in dataloader:
             x_cate_batch = x_cate_batch.to(self.device)
             mask_cate = mask_cate.to(self.device)
             mask_cate_seq = mask_cate_seq.to(self.device)
-            
-            # st = datetime.datetime.now()
-            # print("start epoch")
 
             x_batch = x_batch.to(self.device)
             mask_batch = mask_batch.to(self.device)
@@ -113,23 +111,11 @@ class Trainer(object):
             # batch_size = x_batch.size(0)
 
             self.optim.zero_grad()
-            # hidden_subseq = self.model.init_hidden(batch_size)
-            # hidden_seq = self.model.init_hidden(batch_size)
-            logit_batch = self.model(x_cate_batch, mask_cate, mask_cate_seq, max_acticonNum_cate, max_subseqNum_cate, subseqLen_cate, seqLen_cate, x_batch, mask_batch, seqLen_batch, "train")
 
-            neg_y_batch = neg_y_batch.to(self.device)
-
-            first_dim_index = torch.arange(neg_y_batch.size(0)).to(self.device)
-            first_dim_index = first_dim_index.reshape(-1, 1)
-            logit_negSampled_batch = logit_batch[first_dim_index, neg_y_batch]
-
-            logit_target_batch = logit_batch[first_dim_index, y_batch.reshape(-1, 1)]
+            logit_batch, target_batch = self.model(x_cate_batch, mask_cate, mask_cate_seq, max_acticonNum_cate, max_subseqNum_cate, subseqLen_cate, seqLen_cate, x_batch, mask_batch, seqLen_batch, y_batch, "train")
             
-            loss_batch = self.loss_func(logit_target_batch, logit_negSampled_batch, y_batch)
+            loss_batch = self.loss_func(logit_batch, target_batch)
             losses.append(loss_batch.item())
-            
-            # et_2 = datetime.datetime.now()
-            # print("loss time", et_2-et_1)
             
             loss_batch.backward()
             max_norm = 5.0
@@ -137,10 +123,6 @@ class Trainer(object):
             torch.nn.utils.clip_grad_norm(self.model.parameters(), max_norm)
 
             self.optim.step()
-            # print(prof)    
-            # exit()
-            # et = datetime.datetime.now()
-            # print("backward time", et-et_2)
-
+    
         mean_losses = np.mean(losses)
         return mean_losses
