@@ -199,7 +199,7 @@ def main():
 	if not args.is_eval:
 		ss = SampledSoftmax(output_size, negative_num, embedding_dim, None)
 
-		model = GRU4REC(log, window_size, input_size, hidden_size, output_size, ss,
+		model = GRU4REC(log, ss, window_size, input_size, hidden_size, output_size, 
 							final_act=final_act,
 							num_layers=num_layers,
 							use_cuda=args.cuda,

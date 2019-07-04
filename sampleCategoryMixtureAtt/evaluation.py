@@ -3,6 +3,7 @@ import torch
 import dataset
 from metric import *
 import datetime
+import torch.nn.functional as F
 
 class Evaluation(object):
 	def __init__(self, log, model, loss_func, use_cuda, k=20, warm_start=5):
@@ -48,18 +49,21 @@ class Evaluation(object):
 
 				# st = datetime.datetime.now()
 
-				logit_batch, target_batch = self.model(x_cate_batch, mask_cate, mask_cate_seq, max_acticonNum_cate, max_subseqNum_cate, subseqLen_cate, seqLen_cate, x_batch, mask_batch, seqLen_batch, y_batch, "test")
+				output_batch = self.model(x_cate_batch, mask_cate, mask_cate_seq, max_acticonNum_cate, max_subseqNum_cate, subseqLen_cate, seqLen_cate, x_batch, mask_batch, seqLen_batch, "test")
 
+				sampled_logit_batch, sampled_target_batch = self.model.m_ss(output_batch, y_batch)
 				# et_0 = datetime.datetime.now()
 				# print("model duration", et_0-st)
 				
-				loss_batch = self.loss_func(logit_batch, target_batch)
+				loss_batch = self.loss_func(sampled_logit_batch, sampled_target_batch)
 
 				losses.append(loss_batch.item())
 
 				# et_1 = datetime.datetime.now()
 				# print("loss time", et_1-et_0)
 
+				logit_batch = F.linear(output_batch, self.model.m_ss.params.weight)
+				
 				recall_batch, mrr_batch = evaluate(logit_batch, y_batch, warm_start_mask, k=self.topk)
 
 				weights.append( int( warm_start_mask.int().sum() ) )

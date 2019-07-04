@@ -112,9 +112,11 @@ class Trainer(object):
 
             self.optim.zero_grad()
 
-            logit_batch, target_batch = self.model(x_cate_batch, mask_cate, mask_cate_seq, max_acticonNum_cate, max_subseqNum_cate, subseqLen_cate, seqLen_cate, x_batch, mask_batch, seqLen_batch, y_batch, "train")
+            output_batch = self.model(x_cate_batch, mask_cate, mask_cate_seq, max_acticonNum_cate, max_subseqNum_cate, subseqLen_cate, seqLen_cate, x_batch, mask_batch, seqLen_batch, "train")
+
+            sampled_logit_batch, sampled_target_batch = self.model.m_ss(output_batch, y_batch)
             
-            loss_batch = self.loss_func(logit_batch, target_batch)
+            loss_batch = self.loss_func(sampled_logit_batch, sampled_target_batch)
             losses.append(loss_batch.item())
             
             loss_batch.backward()
