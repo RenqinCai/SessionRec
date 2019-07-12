@@ -130,28 +130,34 @@ class GRU4REC(nn.Module):
         
         ### logit_cate_mask: category prediction
         cate_logit_mask = self.m_cate_h2o(cate_last_output_mask)
-        cate_prob_mask = F.softmax(cate_logit_mask, dim=-1)
+        # cate_prob_mask = F.softmax(cate_logit_mask, dim=-1)
 
         # if train_test_flag == "test":
         #     print("cate_subseq_batch", cate_subseq_batch)
 
-        first_dim_index = torch.arange(batch_size_short).to(self.device).reshape(-1, 1)
-        second_dim_index = torch.from_numpy(cate_subseq_batch).to(self.device)
+        # first_dim_index = torch.arange(batch_size_short).to(self.device).reshape(-1, 1)
+        # second_dim_index = torch.from_numpy(cate_subseq_batch).to(self.device)
 
-        ### weight_normalized: batch_size*subseq_num
-        weight_normalized = cate_prob_mask[first_dim_index, second_dim_index]
+        # ### weight_normalized: batch_size*subseq_num
+        # weight_normalized = cate_prob_mask[first_dim_index, second_dim_index]
 
-        ### weight_normalized: batch_size*subseq_num
-        weight_normalized_mask = weight_normalized*mask_cate_seq_batch
+        # ### weight_normalized: batch_size*subseq_num
+        # weight_normalized_mask = weight_normalized*mask_cate_seq_batch
 
-        weight_normalized_mask_sum = torch.sum(weight_normalized_mask, dim=1)
-        weight_normalized_mask_sum = weight_normalized_mask_sum.unsqueeze(-1)
-        weight_normalized_mask = weight_normalized_mask/weight_normalized_mask_sum
+        # weight_normalized_mask_sum = torch.sum(weight_normalized_mask, dim=1)
+        # weight_normalized_mask_sum = weight_normalized_mask_sum.unsqueeze(-1)
+        # weight_normalized_mask = weight_normalized_mask/weight_normalized_mask_sum
 
-        weight_normalized_mask = weight_normalized_mask.unsqueeze(-1)
-        weighted_input_seq_cate = weight_normalized_mask*input_seq_cate
+        # weight_normalized_mask = weight_normalized_mask.unsqueeze(-1)
+        # weighted_input_seq_cate = weight_normalized_mask*input_seq_cate
       
-        sum_input_seq_cate = torch.sum(weighted_input_seq_cate, dim=1)
+        # sum_input_seq_cate = torch.sum(weighted_input_seq_cate, dim=1)
+
+        input_seq_cate.permute(0, 2, 1)
+
+        sum_input_seq_cate = F.avg_pool1d(input_seq_cate, input_seq_cate.size(-1))
+        input_seq_cate.permute(0, 2, 1)
+        sum_input_seq_cate.permute(0, 2, 1)
         output_short = output_short.squeeze()
 
         mixture_output = torch.cat((sum_input_seq_cate, output_short), dim=1)
@@ -159,7 +165,7 @@ class GRU4REC(nn.Module):
         # mixture_output = sum_input_seq_cate+output_short
 
         # logits, new_targets = self.m_ss(fc_output, target_y_batch)
-
+        # return output_short, cate_logit_mask
         return fc_output, cate_logit_mask
 
     def embedding_dropout(self, input):
