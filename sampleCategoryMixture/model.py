@@ -138,7 +138,7 @@ class GRU4REC(nn.Module):
         # first_dim_index = torch.arange(batch_size_short).to(self.device).reshape(-1, 1)
         # second_dim_index = torch.from_numpy(cate_subseq_batch).to(self.device)
 
-        # ### weight_normalized: batch_size*subseq_num
+        ### weight_normalized: batch_size*subseq_num
         # weight_normalized = cate_prob_mask[first_dim_index, second_dim_index]
 
         # ### weight_normalized: batch_size*subseq_num
@@ -153,11 +153,10 @@ class GRU4REC(nn.Module):
       
         # sum_input_seq_cate = torch.sum(weighted_input_seq_cate, dim=1)
 
-        input_seq_cate.permute(0, 2, 1)
-
-        sum_input_seq_cate = F.avg_pool1d(input_seq_cate, input_seq_cate.size(-1))
-        input_seq_cate.permute(0, 2, 1)
-        sum_input_seq_cate.permute(0, 2, 1)
+        avg_input_seq_cate = input_seq_cate.permute(0, 2, 1)
+        sum_input_seq_cate = F.avg_pool1d(avg_input_seq_cate, avg_input_seq_cate.size(-1))
+    
+        sum_input_seq_cate = sum_input_seq_cate.squeeze()
         output_short = output_short.squeeze()
 
         mixture_output = torch.cat((sum_input_seq_cate, output_short), dim=1)

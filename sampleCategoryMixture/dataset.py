@@ -215,8 +215,8 @@ class DataLoader():
 			input_subseq_list_seq_cate_list_subbatch = input_subseq_list_cate_list_batch[batch_index]
 			input_subseqLen_list_cate_list_subbatch = input_subseqLen_list_cate_list_batch[batch_index]
 			input_cate_subseq_list_subbatch = input_cate_subseq_list_batch[batch_index]
-			input_cate_seq_list_subbatch = input_cate_seq_list_batch[batch_index]
 
+			input_cate_seq_list_subbatch = input_cate_seq_list_batch[batch_index]
 			input_seq_list_subbatch = input_seq_list_batch[batch_index]
 			input_seqLen_list_subbatch = input_seqLen_list_batch[batch_index]
 			target_action_seq_list_subbatch = target_action_seq_list_batch[batch_index]
