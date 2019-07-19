@@ -60,7 +60,6 @@ parser.add_argument('--warm_start', default=5, type=int)
 
 parser.add_argument('--n_epochs', default=20, type=int)
 parser.add_argument('--time_sort', default=False, type=bool)
-parser.add_argument('--model_name', default='GRU4REC', type=str)
 parser.add_argument('--save_dir', default='models', type=str)
 parser.add_argument('--data_folder', default='../Data/movielen/1m/', type=str)
 parser.add_argument('--data_action', default='item.pickle', type=str)
@@ -73,6 +72,9 @@ parser.add_argument('--data_name', default=None, type=str)
 parser.add_argument('--shared_embedding', default=None, type=int)
 parser.add_argument('--patience', default=1000)
 parser.add_argument('--negative_num', default=1000, type=int)
+parser.add_argument('--valid_start_time', default=0, type=int)
+parser.add_argument('--test_start_time', default=0, type=int)
+parser.add_argument('--model_name', default="samplePaddingSessionRNN", type=str)
 
 # Get the arguments
 args = parser.parse_args()
@@ -80,6 +82,7 @@ args.cuda = torch.cuda.is_available()
 
 np.random.seed(args.seed)
 torch.manual_seed(7)
+random.seed(args.seed)
 
 if args.cuda:
 	torch.cuda.manual_seed(args.seed)
@@ -88,7 +91,16 @@ def make_checkpoint_dir():
 	print("PARAMETER" + "-"*10)
 	now = datetime.datetime.now()
 	S = '{:02d}{:02d}{:02d}{:02d}'.format(now.month, now.day, now.hour, now.minute)
+	checkpoint_dir = "../log/"+args.model_name+"/"+args.checkpoint_dir
+	args.checkpoint_dir = checkpoint_dir
 	save_dir = os.path.join(args.checkpoint_dir, S)
+
+	if not os.path.exists("../log"):
+		os.mkdir("../log")
+	
+	if not os.path.exists("../log/"+args.model_name):
+		os.mkdir("../log/"+args.model_name)
+
 	if not os.path.exists(args.checkpoint_dir):
 		os.mkdir(args.checkpoint_dir)
 
@@ -96,7 +108,7 @@ def make_checkpoint_dir():
 		os.mkdir(save_dir)
 
 	args.checkpoint_dir = save_dir
-
+	
 	with open(os.path.join(args.checkpoint_dir, 'parameter.txt'), 'w') as f:
 		for attr, value in sorted(args.__dict__.items()):
 			print("{}={}".format(attr.upper(), value))
@@ -168,7 +180,15 @@ def main():
 	data_cate = args.data_folder+args.data_cate
 	data_time = args.data_folder+args.data_time
 	
-	data_obj = Data(data_action, data_cate, data_time, observed_threshold, window_size)
+	valid_start_time = args.valid_start_time
+	test_start_time = args.test_start_time
+
+	data_pickle = args.data_folder+"dataObj.pickle"
+	data_f = open(data_pickle, "rb")
+
+	data_obj = pickle.load(data_f)
+	data_f.close()
+	# data_obj = Data(data_action, data_cate, data_time, valid_start_time, test_start_time, observed_threshold, window_size)
 	
 	train_data = data_obj.train_dataset
 

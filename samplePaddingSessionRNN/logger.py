@@ -1,6 +1,7 @@
 from tensorboardX import SummaryWriter
 import datetime
 import os
+import torch
 
 class Logger():
 	def __init__(self):
@@ -35,12 +36,19 @@ class Logger():
 		self.m_io_writer.write(outputString+"\n")
 		self.m_io_writer.flush()
 
-	def addScalar2Tensorboard(self, scalar_name, scalar, index):
-		self.m_tensor_writer.add_scalar('data/'+scalar_name, scalar, index)
+	def addScalar2Tensorboard(self, name, value, index):
+		self.m_tensor_writer.add_scalar('data/'+name, value, index)
 
+	def addHistogram2Tensorboard(self, name, value, index):
+		print("----"*10)
+		print(torch.max(value), torch.min(value))
+		print(torch.sum(value))
+		print("----"*10)
+
+		self.m_tensor_writer.add_histogram('data/'+name, value, index, 'tensorflow')
+	
 	def closeIOWriter(self):
 		self.m_io_writer.close()
 
 	def closeTensorWriter(self):
 		self.m_tensor_writer.close()
-	

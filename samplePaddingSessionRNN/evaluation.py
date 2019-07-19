@@ -4,6 +4,7 @@ import dataset
 from metric import *
 import datetime
 import torch.nn.functional as F
+import random
 
 class Evaluation(object):
 	def __init__(self, log, model, loss_func, use_cuda, k=20, warm_start=5):
@@ -16,7 +17,7 @@ class Evaluation(object):
 
 		self.m_log = log
 
-	def eval(self, eval_data, batch_size):
+	def eval(self, eval_data, batch_size, train_test_flag):
 		self.model.eval()
 
 		losses = []
@@ -33,6 +34,11 @@ class Evaluation(object):
 		with torch.no_grad():
 			total_test_num = []
 			for x_batch, y_batch, x_len_batch, idx_batch in dataloader:
+				if train_test_flag == "train":
+					eval_flag = random.randint(1,101)
+					if eval_flag != 10:
+						continue
+
 				x_batch = x_batch.to(self.device)
 				y_batch = y_batch.to(self.device)
 
@@ -53,8 +59,8 @@ class Evaluation(object):
 				# et_2 = datetime.datetime.now()
 				# print("duration 2", et_2-et_1)
 
-				logit_batch = self.model.m_ss.params(output_batch)
-				recall_batch, mrr_batch = evaluate(logit_batch, y_batch, warm_start_mask, k=self.topk)
+				# logit_batch = self.model.m_ss.params(output_batch)
+				recall_batch, mrr_batch = evaluate(sampled_logit_batch, sampled_target_batch, warm_start_mask, k=self.topk)
 
 				weights.append( int( warm_start_mask.int().sum() ) )
 				recalls.append(recall_batch)

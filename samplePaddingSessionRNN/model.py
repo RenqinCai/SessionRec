@@ -18,7 +18,7 @@ class GRU4REC(nn.Module):
         self.device = torch.device('cuda' if use_cuda else 'cpu')
         self.m_log = log
         
-        self.m_h2o = nn.Linear(hidden_size, output_size)
+        # self.m_h2o = nn.Linear(hidden_size, output_size)
             
         self.create_final_activation(final_act)
 
@@ -74,6 +74,10 @@ class GRU4REC(nn.Module):
             last_output = self.m_fc(last_output)
             last_output = self.m_fc_relu(last_output)
 
+        # name = "last output"
+        # # print("last_outputgrad", last_output.grad)
+        # if last_output.grad:
+        #     log.addHistogram2Tensorboard(name, last_output.grad, batch_iter)
         # logit = self.m_h2o(last_output)
         # logit = F.linear(last_output, self.m_ss.params)
         # logit = F.linear(last_output, self.m_out_weight, bias=self.m_out_bias)

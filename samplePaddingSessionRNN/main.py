@@ -19,6 +19,12 @@ import pickle
 import sys
 import logger
 
+import sys
+sys.path.insert(0, '../PyTorch_GBW_LM')
+sys.path.insert(0, '../PyTorch_GBW_LM/log_uniform')
+
+from sparse_model import RNNModel, SampledSoftmax
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--hidden_size', default=50, type=int)
 parser.add_argument('--num_layers', default=1, type=int)
@@ -64,6 +70,7 @@ parser.add_argument('--checkpoint_dir', type=str, default='checkpoint')
 parser.add_argument('--data_name', default=None, type=str)
 parser.add_argument('--shared_embedding', default=None, type=int)
 parser.add_argument('--patience', default=1000)
+parser.add_argument('--negative_num', default=1000, type=int)
 
 # Get the arguments
 args = parser.parse_args()
@@ -207,8 +214,12 @@ def main():
 	
 	valid_data_loader = dataset.DataLoader(valid_data, batch_size)
 	
+	negative_num = args.negative_num
+
 	if not args.is_eval:
-		model = GRU4REC(log, window_size, input_size, hidden_size, output_size,
+		ss = SampledSoftmax(output_size, negative_num, embedding_dim, None)
+
+		model = GRU4REC(log, ss, window_size, input_size, hidden_size, output_size,
 							final_act=final_act,
 							num_layers=num_layers,
 							use_cuda=args.cuda,
