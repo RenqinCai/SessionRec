@@ -18,7 +18,7 @@ from trainer import *
 from torch.utils import data
 import pickle
 import sys
-from dataset_time_cut import *
+from data_time import *
 from logger import *
 
 import sys
@@ -183,14 +183,21 @@ def main():
 	valid_start_time = args.valid_start_time
 	test_start_time = args.test_start_time
 
-	data_pickle = args.data_folder+"dataObj.pickle"
-	data_f = open(data_pickle, "rb")
+	# data_pickle = args.data_folder+"dataObj.pickle"
+	# data_f = open(data_pickle, "rb")
 
-	data_obj = pickle.load(data_f)
-	data_f.close()
+	# data_obj = pickle.load(data_f)
+	# data_f.close()
+
 	# data_obj = Data(data_action, data_cate, data_time, valid_start_time, test_start_time, observed_threshold, window_size)
-	
-	train_data = data_obj.train_dataset
+	train_folder = args.data_folder+"/train"
+	train_data = Dataset(train_folder)
+
+	train_data_loader = 
+
+	test_folder = args.data_folder+"/test"
+	test_data = Dataset(test_folder)
+
 
 	print("+"*10)
 	print("valid load")
