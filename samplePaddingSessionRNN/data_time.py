@@ -1,10 +1,13 @@
 import pandas as pd
 import numpy as np
 import torch
-import datatime
+import datetime
 import pickle
 import random
 from torch.utils import data
+import os
+import torch.multiprocessing
+torch.multiprocessing.set_sharing_strategy('file_system')
 
 class MYDATA(object):
 	def __init__(self, action_file, cate_file, time_file, valid_start_time, test_start_time, observed_thresh, window_size):
@@ -98,7 +101,7 @@ class MYDATA(object):
 				if time_cur <= valid_start_time:
 					if item_cur not in self.m_itemmap:
 						self.m_itemmap[item_cur] = len(self.m_itemmap)
-
+				continue
 				if action_index < observed_thresh:
 					if cate_cur not in self.m_catemap:
 						cate_id_cur = len(self.m_catemap)
@@ -248,12 +251,13 @@ class MYDATA(object):
 		batch_num = int(x_seq_num/batch_size)
 
 		print("batch num", batch_num)
-		file_num = 5
+		file_num = 20
 		step_size = int(batch_num/file_num)
 
 		print("file num", file_num)
 		print("step size", step_size)
 
+		iter_index = 0
 		for step_index in range(0, batch_num, step_size):
 			start_batch_index_step = step_index
 
@@ -277,12 +281,14 @@ class MYDATA(object):
 
 			step_data_map = {"long_cateNum": x_long_cateNum_list_step, "long_action_cate":x_long_cate_action_list_step, "long_actionNum_cate": x_long_cate_actionNum_list_step, "long_cate": x_long_cate_list_step, "short_action": x_short_action_list_step, "short_cate": x_short_cate_list_step, "short_actionNum": x_short_actionNum_list_step, "target_action": y_action_step, "target_cate": y_cate_step, "target_id":y_action_idx_step}
 
-			f_name = "/"+str(step_index)+".pickle"
+			f_name = "/"+str(iter_index)+".pickle"
 			f_name = folder+f_name
 			f_step = open(f_name, "wb")
 
 			pickle.dump(step_data_map, f_step)
 			f_step.close()
+
+			iter_index += 1
 
 class MYDATASET(object):
 	def __init__(self, x_long_cate_action_list, x_long_cate_actionNum_list, x_long_cateNum_list, x_long_cate_list, x_short_action_list, x_short_cate_list, x_short_actionNum_list, y_action, y_cate, y_action_idx):
@@ -304,12 +310,18 @@ class MYDATASET(object):
 class Dataset(data.Dataset):
 	def __init__(self, folder):
 		self.m_folder = folder
+		
+		self.m_file_num = 0
+		for file in os.listdir(self.m_folder):
+			if file.endswith(".pickle"):
+				self.m_file_num += 1
 
 	def __len__(self):
-		return len(self.files)
+		return self.m_file_num
 
 	def __getitem__(self, index):
 		file_name = self.m_folder+"/"+str(index)+".pickle"
+		print("file name", file_name)
 		f_step = open(file_name, "rb")
 
 		step_data_map = pickle.load(f_step)
@@ -333,7 +345,7 @@ class Dataset(data.Dataset):
 
 class MYDATALOADER():
 	def __init__(self, train_test_dataset, batch_size):
-		params = {'batch_size': 1, "shuffle": True, "num_workers": 6}
+		params = {'batch_size': 1, "shuffle": True, "num_workers": 0}
 		self.m_dataloader = data.DataLoader(train_test_dataset, **params)
 		self.m_batch_size = batch_size
 
@@ -350,8 +362,10 @@ class MYDATALOADER():
 			batch_size = self.m_batch_size
 			
 			input_num = len(x_short_action_list_step)
-			batch_num = int(input_num/batch_size)
-			print("batch num", batch_num)
+			print(input_num)
+			batch_num = input_num
+			# batch_num = int(input_num/batch_size)
+			print("batch num in a step", batch_num)
 			for batch_index in range(batch_num):
 				x_batch = []
 				y_batch = []
@@ -365,15 +379,15 @@ class MYDATALOADER():
 					x_batch.append(x)
 					y_batch.append(y)
 					idx_batch.append(y_action_idx_step[seq_index])
-					
+					print("y batch", y)
 				x_batch, y_batch, x_len_batch, idx_batch = self.batchifyData(x_batch, y_batch, idx_batch)
 
 				x_batch_tensor = torch.LongTensor(x_batch)
 				y_batch_tensor = torch.LongTensor(y_batch)
 				idx_batch_tensor = torch.LongTensor(idx_batch)
-				
-				yield x_batch_tensor, y_batch_tensor, x_len_batch, idx_batch_tensor
 
+				yield x_batch_tensor, y_batch_tensor, idx_batch_tensor
+				
 	def batchifyData(self, input_action_seq_batch, target_action_seq_batch, idx_batch):
 		seq_len_batch = [len(seq_i) for seq_i in input_action_seq_batch]
 

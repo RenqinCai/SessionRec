@@ -18,8 +18,8 @@ from trainer import *
 from torch.utils import data
 import pickle
 import sys
-from dataset_time_cut import *
-# from data_time import *
+# from dataset_time_cut import *
+from data_time import *
 from logger import *
 
 import sys
@@ -190,13 +190,15 @@ def main():
 	# data_obj = pickle.load(data_f)
 	# data_f.close()
 
-	data_obj = Data(data_action, data_cate, data_time, valid_start_time, test_start_time, observed_threshold, window_size)
+	# data_obj = Data(data_action, data_cate, data_time, valid_start_time, test_start_time, observed_threshold, window_size)
+	
+	data_obj = MYDATA(data_action, data_cate, data_time, valid_start_time, test_start_time, observed_threshold, window_size)
 
-	train_data = data_obj.train_dataset
-	valid_data = data_obj.test_dataset
-	test_data = data_obj.test_dataset
+	# train_data = data_obj.train_dataset
+	# valid_data = data_obj.test_dataset
+	# test_data = data_obj.test_dataset
 
-	# data_obj = MYDATA(data_action, data_cate, data_time, valid_start_time, test_start_time, observed_threshold, window_size)
+	# 
 
 	# train_folder = args.data_folder+"/train"
 	# data_obj.save2pickle(data_obj.train_dataset, batch_size, train_folder)
@@ -204,15 +206,17 @@ def main():
 	# test_folder = args.data_folder+"/test"
 	# data_obj.save2pickle(data_obj.test_dataset, batch_size, test_folder)
 
-	# train_folder = args.data_folder+"/train"
-	# train_data = Dataset(train_folder)
+	# exit()
 
-	# train_data_loader = MYDATALOADER(train_data, batch_size)
+	train_folder = args.data_folder+"train"
+	train_data = Dataset(train_folder)
 
-	# test_folder = args.data_folder+"/test"
-	# test_data = Dataset(test_folder)
+	train_data_loader = MYDATALOADER(train_data, batch_size)
 
-	# test_data_loader = MYDATALOADER(test_data, batch_size)
+	test_folder = args.data_folder+"test"
+	test_data = Dataset(test_folder)
+
+	test_data_loader = MYDATALOADER(test_data, batch_size)
 
 	print("+"*10)
 	print("valid load")
@@ -224,11 +228,11 @@ def main():
 	output_size = input_size
 
 	negative_num = args.negative_num
-	# print("input_size", input_size)
+	print("input_size", input_size)
 
-	train_data_loader = dataset.DataLoader(train_data, batch_size)
-	valid_data_loader = dataset.DataLoader(valid_data, batch_size)
-	test_data_loader = dataset.DataLoader(test_data, batch_size)
+	# train_data_loader = dataset.DataLoader(train_data, batch_size)
+	# valid_data_loader = dataset.DataLoader(valid_data, batch_size)
+	# test_data_loader = dataset.DataLoader(test_data, batch_size)
 
 	if not args.is_eval:
 		
