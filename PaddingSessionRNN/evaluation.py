@@ -46,6 +46,10 @@ class Evaluation(object):
 
 				losses.append(loss_batch.item())
 				
+				# self.topk = target_y_batch.size(0)
+				# target_y_batch = torch.LongTensor(torch.arange(target_y_batch.size(0))).to(self.device)
+				# recall_batch, mrr_batch = evaluate(logit_sampled_batch, target_y_batch, warm_start_mask, k=self.topk)
+				# 
 				recall_batch, mrr_batch = evaluate(logit_batch, target_y_batch, warm_start_mask, k=self.topk)
 
 				weights.append( int( warm_start_mask.int().sum() ) )
@@ -57,7 +61,6 @@ class Evaluation(object):
 		mean_losses = np.mean(losses)
 		mean_recall = np.average(recalls, weights=weights)
 		mean_mrr = np.average(mrrs, weights=weights)
-		print()
 
 		msg = "total_test_num"+str(np.sum(total_test_num))
 		self.m_log.addOutput2IO(msg)

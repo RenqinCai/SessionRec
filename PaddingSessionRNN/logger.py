@@ -4,7 +4,7 @@ import os
 
 class Logger():
 	def __init__(self):
-		self.m_tensor_writer = SummaryWriter()
+		self.m_tensor_writer = None
 		self.m_io_writer = None
 	
 	def addIOWriter(self, args):
@@ -26,6 +26,9 @@ class Logger():
 		output_file = output_file+"_"+str(data_name)
 		print("output_file", output_file)
 		self.m_io_writer = open(output_file, "w")
+
+		tensor_file_name = myhost+"_"+file_time
+		self.m_tensor_writer = SummaryWriter("../tensorboard/RNNvsCateAttn/"+tensor_file_name)
 
 	def addOutput2IO(self, outputString):
 		print(outputString)

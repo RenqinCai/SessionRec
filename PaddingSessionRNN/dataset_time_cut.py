@@ -13,6 +13,10 @@ class Data(object):
 
 		self.m_itemmap = {}
 		self.m_catemap = {}
+		self.m_itemFreq_map = {}
+
+		self.m_itemmap['<PAD>'] = 0
+		self.m_itemFreq_map[0] = 0
 
 		action_f = open(action_file, "rb")
 		action_seq_arr_total = pickle.load(action_f)
@@ -95,8 +99,12 @@ class Data(object):
 
 				if time_cur <= valid_start_time:
 					if item_cur not in self.m_itemmap:
-						item_id_cur = len(self.m_itemmap)
-						self.m_itemmap[item_cur] = item_id_cur
+						self.m_itemmap[item_cur] = len(self.m_itemmap)
+					
+					if item_cur not in self.m_itemFreq_map:
+						self.m_itemFreq_map[item_cur] = 0.0
+					
+					self.m_itemFreq_map[item_cur] += 1.0
 								
 				if action_index < observed_threshold:
 					continue
@@ -118,9 +126,11 @@ class Data(object):
 		print("subseq num for testing", len(self.m_input_seq_list_test))
 		print("subseq len num for testing", len(self.m_input_seqLen_list_test))
 
-		self.train_dataset = Dataset(self.m_input_seq_list_train, self.m_input_seqLen_list_train, self.m_target_action_seq_list_train, self.m_input_seq_idx_list_train)
+		# self.m_item_df = pd.DataFrame([self.m_itemmap, self.m_itemFreq_map])
 
-		self.test_dataset = Dataset(self.m_input_seq_list_test, self.m_input_seqLen_list_test, self.m_target_action_seq_list_test, self.m_input_seq_idx_list_test)
+		self.train_dataset = Dataset(self.m_input_seq_list_train, self.m_input_seqLen_list_train, self.m_target_action_seq_list_train, self.m_input_seq_idx_list_train, self.m_itemFreq_map)
+
+		self.test_dataset = Dataset(self.m_input_seq_list_test, self.m_input_seqLen_list_test, self.m_target_action_seq_list_test, self.m_input_seq_idx_list_test, self.m_itemFreq_map)
 
 		# return self.train_dataset, self.test_dataset
 
@@ -167,12 +177,14 @@ class Data(object):
 
 	@property
 	def items(self):
-		print("item num", len(self.m_itemmap))
+		print("item num", len(self.m_itemFreq_map))
+		return self.m_itemFreq_map
+		# print("item num", self.m_item_df.itemid.nunique())
 		# print("first item", self.m_itemmap['<PAD>'])
-		return self.m_itemmap
+		# return self.m_item_df
 
 class Dataset(object):
-	def __init__(self, input_seq_list, input_seqLen_list, target_action_seq_list, input_seq_idx_list):
+	def __init__(self, input_seq_list, input_seqLen_list, target_action_seq_list, input_seq_idx_list, itemFreq_map):
 
 		self.m_input_seq_list = input_seq_list
 		self.m_input_seqLen_list = input_seqLen_list
@@ -180,6 +192,7 @@ class Dataset(object):
 		self.m_target_action_seq_list = target_action_seq_list
 		self.m_input_seq_idx_list = input_seq_idx_list
 
+		self.m_itemFreq_map = itemFreq_map
 
 if __name__ == "__main__":
 	st = datetime.datetime.now()

@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from torch.autograd import Variable
+# from torch.autograd import Variable
 import torch.nn.functional as F
 
 
@@ -10,7 +10,7 @@ class LossFunction(nn.Module):
         super(LossFunction, self).__init__()
         self.loss_type = loss_type
         self.use_cuda = use_cuda
-        if loss_type == 'CrossEntropy':
+        if loss_type == 'XE':
             self._loss_fn = SampledCrossEntropyLoss(use_cuda)
         elif loss_type == 'TOP1':
             self._loss_fn = TOP1Loss()
@@ -41,11 +41,15 @@ class SampledCrossEntropyLoss(nn.Module):
         self.use_cuda = use_cuda
 
     def forward(self, logit, target):
-        batch_size = logit.size(1)
-        target = Variable(torch.arange(batch_size).long())
+        epsilon = 1e-20
+        pred = F.softmax(logit+epsilon, dim=1)
+
+        # batch_size = logit.size(1)
+        # target = Variable(torch.arange(target.size(0)).long())
+        target = torch.arange(target.size(0)).long()
         if self.use_cuda: target = target.cuda()
 
-        return self.xe_loss(logit, target)
+        return self.xe_loss(pred, target)
 
 
 class BPRLoss(nn.Module):

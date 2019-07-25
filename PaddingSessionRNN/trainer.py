@@ -57,6 +57,7 @@ class Trainer(object):
             msg = "train Epoch: {}, train loss: {:.4f},  loss: {:.4f},recall: {:.4f}, mrr: {:.4f}, time: {}".format(epoch, train_loss, loss, recall, mrr, time.time() - st)
             self.m_log.addOutput2IO(msg)
             self.m_log.addScalar2Tensorboard("train_loss", train_loss, epoch)
+            self.m_log.addScalar2Tensorboard("train_loss_eval", loss, epoch)
             self.m_log.addScalar2Tensorboard('train_recall', recall, epoch)
             self.m_log.addScalar2Tensorboard("train_mrr", mrr, epoch)           
             loss, recall, mrr = self.evaluation.eval(self.eval_data, batch_size)
@@ -91,10 +92,14 @@ class Trainer(object):
             return hidden
        
         dataloader = self.train_data
+
+        batch_index = 0
         for input_x_batch, target_y_batch, x_len_batch, _ in dataloader:
             input_x_batch = input_x_batch.to(self.device)
             target_y_batch = target_y_batch.to(self.device)
 
+            if batch_index%2000 == 0:
+                print("batch_index", batch_index)
             # st = datetime.datetime.now()
             # input_x_batch, target_y_batch, x_len_batch = batchifyData(input_x, target_y)
     
@@ -104,6 +109,7 @@ class Trainer(object):
             logit_batch, hidden = self.model(input_x_batch, hidden, x_len_batch)
 
             ### batch_size*batch_size
+
             logit_sampled_batch = logit_batch[:, target_y_batch.view(-1)]
 
             loss_batch = self.loss_func(logit_sampled_batch, target_y_batch)
@@ -115,6 +121,7 @@ class Trainer(object):
 
             self.optim.step()
 
+            batch_index += 1
             # et = datetime.datetime.now()
             # print("duration batch", et-st)
 

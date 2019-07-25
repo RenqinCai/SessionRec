@@ -11,7 +11,9 @@ class Dataset(object):
 	def __init__(self, action_file, observed_threshold, window_size, itemmap=None):
 		action_f = open(action_file, "rb")
 
-		self.m_itemmap = {}
+		# self.m_itemmap = {}
+		self.m_item_df = pd.DataFrame(columns=['raw_itemid', 'itemid', 'itemFreq'])
+		self.m_item_df.loc[0] = [0, 0, 0]
 
 		action_seq_arr_total = None
 		action_seq_arr_total = pickle.load(action_f)
@@ -38,9 +40,15 @@ class Dataset(object):
 
 			for action_index in range(action_num_seq):
 				item = action_seq_arr[action_index]
-				if item not in self.m_itemmap:
-					item_id = len(self.m_itemmap)
-					self.m_itemmap[item] = item_id
+
+				if item not in self.m_item_df.itemid:
+					itemid = len(self.m_item_df)
+					self.m_item_df.loc[itemid] = [item, itemid, 0]
+				self.m_item_df.loc[self.m_item_df.itemid==itemid, "itemFreq"] += 1
+
+				# if item not in self.m_itemmap:
+				# 	item_id = len(self.m_itemmap)
+				# 	self.m_itemmap[item] = item_id
 
 				if action_index < observed_threshold:
 					continue
@@ -88,14 +96,20 @@ class Dataset(object):
 	@property
 	def items(self):
 		# print("first item", self.m_itemmap['<PAD>'])
-		return self.m_itemmap
+		return self.m_item_df
 
 class DataLoader():
 	def __init__(self, dataset, batch_size):
 		self.m_dataset = dataset
 		self.m_batch_size = batch_size
 	
+		self.m_itemFreq_map = dataset.m_itemFreq_map
+		
 	def __iter__(self):
+		
+		# sorted_df = self.m_item_df.sort_values(by=['itemid'], ascending=True)
+		# pop = sorted_df.itemFreq**self.m_alpha
+		
 		
 		print("shuffling")
 		temp = list(zip(self.m_dataset.m_input_seq_list, self.m_dataset.m_target_action_seq_list, self.m_dataset.m_input_seq_idx_list))

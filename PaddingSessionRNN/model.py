@@ -18,21 +18,32 @@ class GRU4REC(nn.Module):
         self.device = torch.device('cuda' if use_cuda else 'cpu')
         self.m_log = log
         
-        self.h2o = nn.Linear(hidden_size, output_size)
+        self.m_h2o = nn.Linear(hidden_size, output_size)
             
         self.create_final_activation(final_act)
 
         self.look_up = nn.Embedding(input_size, self.embedding_dim).to(self.device)
         self.gru = nn.GRU(self.embedding_dim, self.hidden_size, self.num_layers, dropout=self.dropout_hidden, batch_first=True)
-  
+
+        # self.m_out_weight = nn.Parameter(torch.Tensor(output_size, hidden_size)).to(self.device)
+        # self.m_out_bias = nn.Parameter(torch.Tensor(output_size)).to(self.device)
+
         if shared_embedding:
             msg = "share embedding"
             self.m_log.addOutput2IO(msg)
-            self.out_matrix = self.look_up.weight.to(self.device)
-        else:
-            msg = "separate embedding"
-            self.m_log.addOutput2IO(msg)
-            self.out_matrix = torch.rand(output_size, hidden_size, requires_grad=True).to(self.device)
+            # print("data")
+            # print(self.m_out_weight.data)
+            # print("look up data")
+            # print(self.look_up.weight.data)
+            # self.m_out_weight.data = self.look_up.weight.data
+            self.m_h2o.weight.data = self.look_up.weight.data
+            # print("out weight data", self.m_out_weight.data)
+            # print("bias data", self.m_h2o.bias.data)
+            # self.m_out_matrix = self.look_up.weight.to(self.device)
+        # else:
+        #     msg = "separate embedding"
+        #     self.m_log.addOutput2IO(msg)
+        #     self.out_matrix = torch.rand(output_size, hidden_size, requires_grad=True).to(self.device)
             
         self = self.to(self.device)
 
@@ -63,8 +74,10 @@ class GRU4REC(nn.Module):
         last_output = hidden[-1]
 
         last_output = last_output.view(-1, last_output.size(-1))  # (B,H)
-        output = F.linear(last_output, self.out_matrix)
-        logit = self.final_activation(output) ## (B, output_size)
+        logit = self.m_h2o(last_output)
+        # logit = F.linear(last_output, self.m_out_matrix)
+        # logit = F.linear(last_output, self.m_out_weight, bias=self.m_out_bias)
+        # logit = self.final_activation(output) ## (B, output_size)
         # logit = output
         return logit, hidden
 
