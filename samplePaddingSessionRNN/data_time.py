@@ -316,6 +316,8 @@ class Dataset(data.Dataset):
 			if file.endswith(".pickle"):
 				self.m_file_num += 1
 
+		print("file num", self.m_file_num)
+
 	def __len__(self):
 		return self.m_file_num
 
@@ -345,7 +347,7 @@ class Dataset(data.Dataset):
 
 class MYDATALOADER():
 	def __init__(self, train_test_dataset, batch_size):
-		params = {'batch_size': 1, "shuffle": True, "num_workers": 0}
+		params = {'batch_size': 1, "shuffle": True, "num_workers": 5}
 		self.m_dataloader = data.DataLoader(train_test_dataset, **params)
 		self.m_batch_size = batch_size
 

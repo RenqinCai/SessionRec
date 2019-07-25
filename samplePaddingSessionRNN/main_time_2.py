@@ -207,7 +207,7 @@ def main():
 	# data_obj.save2pickle(data_obj.test_dataset, batch_size, test_folder)
 
 	# exit()
-
+	print("data set train")
 	train_folder = args.data_folder+"train"
 	train_data = Dataset(train_folder)
 

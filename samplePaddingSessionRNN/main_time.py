@@ -3,7 +3,6 @@ use time to cut sequences
 command 
 python main_time.py --data_folder ../Data/xing/ --train_data train_item.pickle --valid_data test_item.pickle --test_data test_item.pickle --data_name xing --embedding_dim 300 --hidden_size 300 --lr 0.005
 """
-
 import argparse
 import torch
 # import lib
@@ -21,6 +20,7 @@ import sys
 from dataset_time_cut import *
 # from data_time import *
 from logger import *
+import collections
 
 import sys
 sys.path.insert(0, '../PyTorch_GBW_LM')
@@ -224,7 +224,7 @@ def main():
 	output_size = input_size
 
 	negative_num = args.negative_num
-	# print("input_size", input_size)
+	print("input_size", input_size)
 
 	train_data_loader = dataset.DataLoader(train_data, batch_size)
 	valid_data_loader = dataset.DataLoader(valid_data, batch_size)
@@ -259,7 +259,13 @@ def main():
 								  momentum=momentum,
 								  eps=eps)
 
-		loss_function = LossFunction(loss_type=loss_type, use_cuda=args.cuda)
+		c_weight_map = dict(collections.Counter(train_data.m_target_action_seq_list))
+		c_weights = [0 for i in range(output_size)]
+		for c_i in range(1, output_size):
+			c_weights[c_i] = len(train_data.m_target_action_seq_list)/c_weight_map[c_i]
+
+		print("c weights", c_weights)
+		loss_function = LossFunction(c_weights=c_weights, loss_type=loss_type)
 
 		trainer = Trainer(log, model,
 							  train_data=train_data_loader,

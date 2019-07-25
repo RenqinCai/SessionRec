@@ -5,7 +5,7 @@ import datetime
 import pickle
 import random
 # import sys
-
+import collections
 
 class Data(object):
 
@@ -271,7 +271,7 @@ class Data(object):
 	@property
 	def cates(self):
 		print("cate num", len(self.m_catemap))
-
+		
 		return self.m_catemap
 
 class Dataset(object):
