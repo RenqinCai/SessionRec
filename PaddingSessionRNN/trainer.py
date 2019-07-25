@@ -127,3 +127,4 @@ class Trainer(object):
 
         mean_losses = np.mean(losses)
         return mean_losses
+
