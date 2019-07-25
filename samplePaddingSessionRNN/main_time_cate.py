@@ -149,7 +149,6 @@ def main():
 	weight_decay = args.weight_decay
 	momentum = args.momentum
 	eps = args.eps
-	BPTT = args.bptt
 
 	n_epochs = args.n_epochs
 	time_sort = args.time_sort
@@ -241,13 +240,12 @@ def main():
 								  momentum=momentum,
 								  eps=eps)
 
-		
-		# c_weight_map = dict(collections.Counter(train_data.m_y_action))
-		# c_weights = [0 for i in range(output_size)]
-		# for c_i in range(1, output_size):
-		# 	c_weights[c_i] = len(train_data.m_y_action)/c_weight_map[c_i]
-
-		c_weights = None
+		c_weight_map = dict(collections.Counter(train_data.m_y_action))
+		c_weights = [0 for i in range(output_size)]
+		for c_i in range(1, output_size):
+			c_weights[c_i] = len(train_data.m_y_action)/c_weight_map[c_i]
+        
+		# c_weights = np.array([1.0 for i in range(output_size)])
 		# print("c weights", c_weights)
 		loss_function = LossFunction(c_weights=c_weights, loss_type=loss_type, use_cuda=args.cuda)
 
@@ -258,8 +256,8 @@ def main():
 							  use_cuda=args.cuda,
 							  loss_func=loss_function,
 							  topk = args.topk,
+                              sample_full_flag = "full",
 							  input_size = input_size,
-							  sample_full_flag = "sample",
 							  args=args)
 
 		trainer.train(0, n_epochs - 1, batch_size)

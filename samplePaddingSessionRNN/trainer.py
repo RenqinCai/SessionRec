@@ -8,8 +8,14 @@ import os
 from dataset import *
 import datetime
 
+import sys
+sys.path.insert(0, '../PyTorch_GBW_LM')
+sys.path.insert(0, '../PyTorch_GBW_LM/log_uniform')
+
+from log_uniform import LogUniformSampler
+
 class Trainer(object):
-    def __init__(self, log, model, train_data, eval_data, optim, use_cuda, loss_func, topk, args):
+    def __init__(self, log, model, train_data, eval_data, optim, use_cuda, loss_func, topk, sample_full_flag, input_size, args):
         self.model = model
         self.train_data = train_data
         self.eval_data = eval_data
@@ -20,6 +26,7 @@ class Trainer(object):
         self.device = torch.device('cuda' if use_cuda else 'cpu')
         self.args = args
         self.m_log = log
+        self.m_sample_full_flag = sample_full_flag
 
         self.m_patience = args.patience
         self.m_best_recall = 0.0
@@ -27,6 +34,10 @@ class Trainer(object):
         self.m_early_stop = False
         self.m_counter = 0
         self.m_batch_iter = 0
+
+        self.m_sampler = LogUniformSampler(input_size)
+        self.m_nsampled = args.negative_num
+        self.m_remove_match = True
 
     def saveModel(self, epoch, loss, recall, mrr):
         checkpoint = {
@@ -105,33 +116,43 @@ class Trainer(object):
 
         batch_index = 0
 
-        for x_batch, y_batch, x_len_batch, _ in dataloader:
-            x_batch = x_batch.to(self.device)
-            y_batch = y_batch.to(self.device)
+        for x_short_action_batch, mask_short_action_batch, pad_x_short_actionNum_batch, y_action_batch, y_action_idx_batch in dataloader:
+            
+            sample_ids = None 
+            true_freq = None
+            sample_freq = None
+            acc_hits = None
+            sampled_logit_batch = None
+            sampled_target_batch = None
+
+            if self.m_sample_full_flag == "sample":
+                sample_values = self.m_sampler.sample(self.m_nsampled, y_action_batch)
+                sample_ids, true_freq, sample_freq = sample_values
+
+                if self.m_remove_match:
+                    acc_hits = self.m_sampler.accidental_match(y_action_batch, sample_ids)
+                    acc_hits = list(zip(*acc_hits))
+
+            x_short_action_batch = x_short_action_batch.to(self.device)
+            mask_short_action_batch = mask_short_action_batch.to(self.device)
+            # x_short_cate_batch = x_short_cate_batch.to(self.device)
+
+            y_action_batch = y_action_batch.to(self.device)
+            y_action_idx_batch = y_action_idx_batch.to(self.device)
 
             if batch_index%10000 == 0:
                 print("batch_index", batch_index)
-            # st = datetime.datetime.now()
-            # input_x_batch, target_y_batch, x_len_batch = batchifyData(input_x, target_y)
-    
+           
             self.optim.zero_grad()
-            hidden = self.model.init_hidden()
 
-            output_batch = self.model(x_batch, hidden, x_len_batch)
+            output_batch = self.model(x_short_action_batch, mask_short_action_batch, pad_x_short_actionNum_batch)
 
-            # output_batch.retain_grad()
-            # output_batch.register_hook(print)
-            # name = "last output"
-            # if output_batch.grad:
-            #     print(output_batch.grad)
-        # # # print("last_outputgrad", last_output.grad)
-        #     if output_batch.grad:
-        #         self.m_log.addHistogram2Tensorboard(name, output_batch.grad, self.m_batch_iter)
-
-            sampled_logit_batch, sampled_target_batch = self.model.m_ss(output_batch, y_batch)
-
-            # sampled_logit_batch.retain_grad()
-
+            if self.m_sample_full_flag == "sample":
+                sampled_logit_batch, sampled_target_batch = self.model.m_ss(output_batch, y_action_batch, sample_ids, true_freq, sample_freq, acc_hits, self.device, self.m_remove_match, "sample")
+            
+            if self.m_sample_full_flag == "full":
+                sampled_logit_batch, sampled_target_batch = self.model.m_ss(output_batch, y_action_batch, sample_ids, true_freq, sample_freq, acc_hits, self.device, self.m_remove_match, "full")
+        
             loss_batch = self.loss_func(sampled_logit_batch, sampled_target_batch)
             losses.append(loss_batch.item())
             loss_batch.backward()

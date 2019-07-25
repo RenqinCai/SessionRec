@@ -20,7 +20,7 @@ class GRU4REC(nn.Module):
         self.m_log = log
         
         self.look_up = nn.Embedding(input_size, self.embedding_dim)
-        self.gru = nn.GRU(self.embedding_dim, self.hidden_size, self.num_layers, dropout=self.dropout_hidden, batch_first=True)
+        self.m_short_gru = nn.GRU(self.embedding_dim, self.hidden_size, self.num_layers, dropout=self.dropout_hidden, batch_first=True)
 
         self.m_ss = ss
 

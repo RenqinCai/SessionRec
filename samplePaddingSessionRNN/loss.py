@@ -5,12 +5,15 @@ import torch.nn.functional as F
 
 
 class LossFunction(nn.Module):
-    def __init__(self, loss_type='TOP1', c_weights=None):
+    def __init__(self, loss_type='TOP1', c_weights=None, use_cuda=True):
         """ An abstract loss function that can supports custom loss functions compatible with PyTorch."""
         super(LossFunction, self).__init__()
         self.loss_type = loss_type
+        self.device = torch.device('cuda' if use_cuda else 'cpu')
     
         if loss_type == 'XE':
+            if c_weights is not None:
+                c_weights = torch.from_numpy(c_weights).float().to(self.device)
             self._loss_fn = SampledCrossEntropyLoss(c_weights)
         elif loss_type == 'TOP1':
             self._loss_fn = TOP1Loss()
@@ -31,7 +34,11 @@ class SampledCrossEntropyLoss(nn.Module):
     def __init__(self, c_weights):
        
         super(SampledCrossEntropyLoss, self).__init__()
-        self.xe_loss = nn.CrossEntropyLoss(weight=c_weights)
+        if c_weights is not None:
+            self.xe_loss = nn.CrossEntropyLoss(weight=c_weights)
+        else:
+            self.xe_loss = nn.CrossEntropyLoss()
+        # self.xe_loss = nn.CrossEntropyLoss()
 
     def forward(self, logit, target):
     

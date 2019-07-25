@@ -33,25 +33,26 @@ class Evaluation(object):
 
 		with torch.no_grad():
 			total_test_num = []
-			for x_batch, y_batch, x_len_batch, idx_batch in dataloader:
+
+			for x_short_action_batch, mask_short_action_batch, pad_x_short_actionNum_batch, y_action_batch, y_action_idx_batch in dataloader:
+
 				if train_test_flag == "train":
 					eval_flag = random.randint(1,101)
 					if eval_flag != 10:
 						continue
 
-				x_batch = x_batch.to(self.device)
-				y_batch = y_batch.to(self.device)
-
-				warm_start_mask = (idx_batch>=self.warm_start)
-                
-				hidden = self.model.init_hidden()
-
-				output_batch = self.model(x_batch, hidden, x_len_batch)
+				x_short_action_batch = x_short_action_batch.to(self.device)
+				mask_short_action_batch = mask_short_action_batch.to(self.device)
+				y_action_batch = y_action_batch.to(self.device)
+			
+				warm_start_mask = (y_action_idx_batch>=self.warm_start)
+	
+				output_batch = self.model(x_short_action_batch, mask_short_action_batch, pad_x_short_actionNum_batch)
 
 				# et_1 = datetime.datetime.now()
 				# print("duration 1", et_1-st)
 				
-				sampled_logit_batch, sampled_target_batch = self.model.m_ss(output_batch, y_batch)
+				sampled_logit_batch, sampled_target_batch = self.model.m_ss(output_batch, y_action_batch, None, None, None, None, None, None, "full")
 
 				loss_batch = self.loss_func(sampled_logit_batch, sampled_target_batch)
 				losses.append(loss_batch.item())
@@ -69,7 +70,7 @@ class Evaluation(object):
 				# et_3 = datetime.datetime.now()
 				# print("duration 3", et_3-et_2)
 
-				total_test_num.append(y_batch.view(-1).size(0))
+				total_test_num.append(y_action_batch.view(-1).size(0))
 
 		mean_losses = np.mean(losses)
 		mean_recall = np.average(recalls, weights=weights)
