@@ -1,225 +1,156 @@
-"""
-use mini batch for more than one steps back
-"""
-
 import pandas as pd
 import numpy as np
 import torch
 
 import pickle
+import random
+# import sys
 
 class Dataset(object):
-    def __init__(self, itemFile, sep='\t', session_key='SessionID', item_key='ItemId', time_key='timestamp', n_sample=-1, itemmap=None, itemstamp=None, time_sort=False):
 
-        data_file = open(itemFile, "rb")
+	def __init__(self, action_file, observed_threshold, window_size, itemmap=None):
+		action_f = open(action_file, "rb")
 
-        data_sess_arr = pickle.load(data_file)
+		self.m_itemmap = {}
 
-        item_sess_arr = data_sess_arr
+		action_seq_arr_total = None
+		action_seq_arr_total = pickle.load(action_f)
 
-        sess_num = len(item_sess_arr)
-        print("session num", sess_num)
+		seq_num = len(action_seq_arr_total)
+		print("seq num", seq_num)
 
-        sess_len_list = []
+		self.m_x_short_action_list = []
+		self.m_x_short_actionNum_list = []
+		self.m_y_action = []
+		self.m_y_action_idx = []
 
-        self.itemmap = itemmap
+		print("loading item map")
 
-        item_id_arr = []
+		print("finish loading item map")
+		print("observed_threshold", observed_threshold, window_size)
+		print("loading data")
+		for seq_index in range(seq_num):
+			action_seq_arr = action_seq_arr_total[seq_index]
 
-        for sess_index in range(sess_num):
-            item_sess_unit_list = item_sess_arr[sess_index]
-            # print("item_sess_unit_list", item_sess_unit_list)
-            
-            sess_len = len(item_sess_unit_list)
+			action_num_seq = len(action_seq_arr)
 
-            # sess_len_list.append(sess_len)
-            sess_action_num = 0
+			if action_num_seq < window_size :
+				window_size = action_num_seq
 
-            # item_id_sess_arr = []
+			for action_index in range(action_num_seq):
+				item = action_seq_arr[action_index]
+				if item not in self.m_itemmap:
+					item_id = len(self.m_itemmap)
+					self.m_itemmap[item] = item_id
 
-            for action_index in range(sess_len):
-                item = item_sess_unit_list[action_index]
-                if itemmap is None:
-                    self.addItem(item, itemmap)
+				if action_index < observed_threshold:
+					continue
 
-                if item not in self.itemmap:
-                    continue
-                
-                item_id = self.itemmap[item]
+				if action_index <= window_size:
+					input_sub_seq = action_seq_arr[:action_index]
+					
+					target_sub_seq = action_seq_arr[action_index]
+					self.m_x_short_action_list.append(input_sub_seq)
+					self.m_x_short_actionNum_list.append(len(input_sub_seq))
+					self.m_y_action.append(target_sub_seq)
+					self.m_y_action_idx.append(action_index)
 
-                sess_action_num += 1
-                # if itemmap is not None:
-                #     print(item_id, item)
-                # item_id_sess_arr.append(item_id)
-                item_id_arr.append(item_id)
+				if action_index > window_size:
+					input_sub_seq = action_seq_arr[action_index-window_size:action_index]
+				
+					target_sub_seq = action_seq_arr[action_index]
+					self.m_x_short_action_list.append(input_sub_seq)
+					self.m_x_short_actionNum_list.append(len(input_sub_seq))
+					self.m_y_action.append(target_sub_seq)
+					self.m_y_action_idx.append(action_index)
 
-            if sess_action_num != 0:
-            #     print("error action num zero")
-            # else:
-                sess_len_list.append(sess_action_num)
-
-        self.click_offsets = self.getClickOffset(sess_num, sess_len_list)
-        self.item_arr = np.array(item_id_arr)
-        self.sess_num = len(sess_len_list)
-
-        print("sess num", len(self.item_arr))
-        
-    def addItem(self, item, itemmap=None):
-        if itemmap is None:
-            if self.itemmap is None:
-                self.itemmap = {}
-
-            if item not in self.itemmap:
-                item_id = len(self.itemmap)
-                self.itemmap[item] = item_id
-
-    def getClickOffset(self, sess_num, sess_len_list):
-
-        if sess_num != len(sess_len_list):
-            print("error sess num")
-
-        offsets = np.zeros(len(sess_len_list)+1, dtype=np.int32)
-        offsets[1:] = np.array(sess_len_list).cumsum()
-
-        # offsets = np.zeros(sess_num+1, dtype=np.int32)
-        # offsets = np.array(sess_len_list, dtype=np.int32)
-
-        return offsets
-
-    @property
-    def items(self):
-        # print("first item", self.itemmap)
-        return self.itemmap
+	@property
+	def items(self):
+		# print("first item", self.m_itemmap['<PAD>'])
+		return self.m_itemmap
 
 class DataLoader():
-    def __init__(self, dataset, BPTT, batch_size=50, onehot_flag=-1):
-        if onehot_flag == -1:
-            onehot_flag = True
-        else:
-            onehot_flag = False
-        self.dataset = dataset
-        self.m_batch_size = batch_size
-        self.m_onehot_flag = onehot_flag
-        self.m_onehot_buffer = None
-        self.m_output_size = len(dataset.itemmap)
-       
-        self.m_window_size = BPTT
-        # self.m_device = torch.device('cuda' if use_cuda else 'cpu')
-        
-        if self.m_onehot_flag:
-            self.m_onehot_buffer = self.initOneHot()
+	def __init__(self, dataset, batch_size):
+		self.m_dataset = dataset
+		self.m_batch_size = batch_size
 
-    def initOneHot(self):
+		sorted_data = sorted(zip(self.m_dataset.m_x_short_action_list, self.m_dataset.m_x_short_actionNum_list, self.m_dataset.m_y_action, self.m_dataset.m_y_action_idx), reverse=True)
 
-        if self.m_window_size > 1:
-            onehot_buffer = torch.FloatTensor(self.m_window_size, self.m_batch_size, self.m_output_size)
-            # onehot_buffer = onehot_buffer.to(self.m_device)
-        else:
-            onehot_buffer = torch.FloatTensor(self.m_batch_size, self.m_output_size)
-            # onehot_buffer = onehot_buffer.to(self.m_device)
+		self.m_dataset.m_x_short_action_list,self.m_dataset.m_x_short_actionNum_list , self.m_dataset.m_y_action, self.m_dataset.m_y_action_idx = zip(*sorted_data)
 
-        return onehot_buffer
-        # print("self.batch_size", self.batch_size)
+		input_seq_num = len(self.m_dataset.m_x_short_action_list)
+		batch_num = int(input_seq_num/batch_size)
+		print("seq num", input_seq_num)
+		print("batch size", self.m_batch_size)
+		print("batch_num", batch_num)
 
-    def __iter__(self):
-        click_offsets = self.dataset.click_offsets
-        item_arr = self.dataset.item_arr
+		x_short_action_list = [self.m_dataset.m_x_short_action_list[i*batch_size:(i+1)*batch_size] for i in range(batch_num)]
+		
+		x_short_actionNum_list = [self.m_dataset.m_x_short_actionNum_list[i*batch_size:(i+1)*batch_size] for i in range(batch_num)]
+		y_action = [self.m_dataset.m_y_action[i*batch_size:(i+1)*batch_size] for i in range(batch_num)]
+	
+		y_action_idx = [self.m_dataset.m_y_action_idx[i*batch_size:(i+1)*batch_size] for i in range(batch_num)]
 
-        sess_num = self.dataset.sess_num
+		temp = list(zip(x_short_action_list, x_short_actionNum_list, y_action, y_action_idx))
 
-        iters = np.arange(self.m_batch_size)
-        maxiter = iters.max()
-        start = click_offsets[iters]
-        end = click_offsets[iters+1]
+		self.m_temp = temp
+	
+	def __iter__(self):
+		print("shuffling")
 
-        mask_sess_arr = []
-        finished = False
+		temp = self.m_temp
+		random.shuffle(temp)
 
-        idx_input_cum = []
+		x_short_action_list, x_short_actionNum_list, y_action, y_action_idx = zip(*temp)
 
-        window_size = self.m_window_size
+		batch_size = self.m_batch_size
+		
+		batch_num = len(x_short_action_list)
 
-        for i in range(window_size-1):
-            idx_input_sample = item_arr[start+i]
-            if len(idx_input_cum) == 0:
-                idx_input_cum.append(idx_input_sample)
-                idx_input_cum = np.array(idx_input_cum)
-            else:
-                idx_input_cum = np.vstack((idx_input_cum, idx_input_sample))
-                # print("size", idx_input_cum.shape, idx_input_sample.shape)
-        start = start + window_size-1
+		for batch_index in range(batch_num):
 
-        min_len = int((end-start).min())
-        if min_len <= window_size:
-            print("error window size for min lens")
+			x_short_action_list_batch = x_short_action_list[batch_index]
+			# x_short_cate_list_batch = x_short_cate_list[batch_index]
+			x_short_actionNum_list_batch = x_short_actionNum_list[batch_index]
 
-        while not finished:
-            min_len = int((end-start).min())
+			y_action_batch = y_action[batch_index]
+			# y_cate_batch = y_cate[batch_index]
+			y_action_idx_batch = y_action_idx[batch_index]
 
-            if min_len <= 0:
-                print("error window size for min lens")
+			x_short_action_batch = []
+			# x_short_cate_batch = []
+			x_short_actionNum_batch = []
 
-            for i in range(min_len-1):
-                # print("iters", iters)
-                # print("start+i", start+i)
-                idx_input_sample = item_arr[start+i]
-                idx_target_sample = item_arr[start+i+1]
-                
-                if window_size > 1:
-                    if i != 0:
-                        idx_input_cum = idx_input_cum[1:]
-              
-                    idx_input_cum = np.vstack((idx_input_cum, idx_input_sample))
-                else:
-                    idx_input_cum = idx_input_sample
-                
-                ### idx_input_cum size:  seq_len*batch_size
-                idx_input = idx_input_cum
+			mask_short_action_batch = []
 
-                ### idx_input size: seq_len*batch_size
-                # idx_input = np.transpose(idx_input_cum)
+			max_short_actionNum_batch = max(x_short_actionNum_list_batch)
+			
+			for seq_index_batch in range(batch_size):
+				x_short_actionNum_seq = x_short_actionNum_list_batch[seq_index_batch]
+				
+				pad_x_short_action_seq = x_short_action_list_batch[seq_index_batch]+[0]*(max_short_actionNum_batch-x_short_actionNum_seq)
+				x_short_action_batch.append(pad_x_short_action_seq)
 
-                idx_target = idx_target_sample
+			x_short_action_batch = np.array(x_short_action_batch)
+			# x_short_cate_batch = np.array(x_short_cate_batch)
 
-                input_tensor = torch.LongTensor(idx_input)
-                target_tensor = torch.LongTensor(idx_target)
+			x_short_actionNum_batch = np.array(x_short_actionNum_list_batch)
+			mask_short_action_batch = np.arange(max_short_actionNum_batch)[None, :] < x_short_actionNum_batch[:, None]
 
-                if self.m_onehot_flag:
-                    self.m_onehot_buffer.zero_()
-                    if window_size > 1:
-                        # input_ = torch.unsqueeze(input_tensor, 2).to(self.m_device)
-                        input_ = torch.unsqueeze(input_tensor, 2)
-                        input_tensor = self.m_onehot_buffer.scatter_(2, input_, 1)
-                    else:
-                        # index = input_tensor.view(-1, 1).to(self.m_device)
-                        index = input_tensor.view(-1, 1)
-                        input_tensor = self.m_onehot_buffer.scatter_(1, index, 1)
+			y_action_batch = np.array(y_action_batch)
+			# y_cate_batch = np.array(y_cate_batch)
+			y_action_idx_batch = np.array(y_action_idx_batch)
 
-                yield idx_input, input_tensor, target_tensor, mask_sess_arr
+			x_short_action_batch_tensor = torch.from_numpy(x_short_action_batch)
+			# x_short_cate_batch_tensor = torch.from_numpy(x_short_cate_batch)
+			mask_short_action_batch_tensor = torch.from_numpy(mask_short_action_batch*1).float()
 
-            start = start + min_len - 1
-            # maxiter = maxiter + 1
+			y_action_batch_tensor = torch.from_numpy(y_action_batch)
+			# y_cate_batch_tensor = torch.from_numpy(y_cate_batch)
 
-            mask_sess_arr = np.arange(self.m_batch_size)[(end-start) <= 1]
-            idx_input_cum = idx_input_cum[1:] 
-            for mask_sess in mask_sess_arr:
-                maxiter = maxiter+1
-                if maxiter >= sess_num:
-                    finished = True
-                    break
+			y_action_idx_batch_tensor = torch.from_numpy(y_action_idx_batch)
 
-                start[mask_sess] = click_offsets[maxiter]+window_size-1
-                end[mask_sess] = click_offsets[maxiter+1]
+	
+			pad_x_short_actionNum_batch = np.array([i-1 if i > 0 else 0 for i in x_short_actionNum_batch])
 
-                iters[mask_sess] = maxiter
-
-                # print(idx_input_cum[:, mask_sess])
-                # print("idx input cum", idx_input_cum)
-                # print(click_offsets[maxiter], start[mask_sess])
-                if window_size > 1:
-                    # print("shape", idx_input_cum.shape)
-                    idx_input_cum[:, mask_sess] = item_arr[click_offsets[maxiter]: start[mask_sess]]
-                
-
-
-
+			yield x_short_action_batch_tensor, mask_short_action_batch_tensor, pad_x_short_actionNum_batch, y_action_batch_tensor, y_action_idx_batch_tensor
