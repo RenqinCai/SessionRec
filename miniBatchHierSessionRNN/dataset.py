@@ -5,28 +5,13 @@ import torch
 import pickle
 
 class Dataset(object):
-	def __init__(self, itemFile, data_name, sep='\t', session_key='SessionID', item_key='ItemId', time_key='timestamp', n_sample=-1, itemmap=None, itemstamp=None, time_sort=False):
+	def __init__(self, itemFile, timeFile, data_name, sep='\t', session_key='SessionID', item_key='ItemId', time_key='timestamp', n_sample=-1, itemmap=None, itemstamp=None, time_sort=False):
 
-		data_file = open(itemFile, "rb")
-		data_sess_arr = pickle.load(data_file)
-		
-		total_action_pickle = None
-		total_time_pickle = None
-	   
-		if data_name == "movielen_itemmap":
-			total_action_pickle = data_sess_arr['action']
-			itemmap = data_sess_arr['itemmap']
-		
-		if data_name == "movielen":
-			total_action_pickle = data_sess_arr
+		action_file = open(itemFile, "rb")
+		total_action_pickle = pickle.load(action_file)
 
-		if data_name == "xing":
-			total_action_pickle = data_sess_arr['item']
-			total_time_pickle = data_sess_arr['time']
-
-		if data_name == "taobao":
-			total_action_pickle = data_sess_arr['item']
-			total_time_pickle = data_sess_arr['time']
+		time_file = open(timeFile, "rb")
+		total_time_pickle = pickle.load(time_file)
 
 		user_num = len(total_action_pickle)
 		print("user num", user_num)

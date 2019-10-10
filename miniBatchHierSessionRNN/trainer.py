@@ -49,7 +49,7 @@ class Trainer(object):
 				'recall': recall,
 				'mrr': mrr
 			}
-			model_name = os.path.join(self.args.checkpoint_dir, "model_{0:05d}.pt".format(epoch))
+			model_name = os.path.join(self.args.checkpoint_dir, "model_best.pt")
 			torch.save(checkpoint, model_name)
 			print("Save model as %s" % model_name)
 

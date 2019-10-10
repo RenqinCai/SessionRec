@@ -46,9 +46,9 @@ parser.add_argument('--time_sort', default=False, type=bool)
 parser.add_argument('--model_name', default='GRU4REC', type=str)
 parser.add_argument('--save_dir', default='models', type=str)
 parser.add_argument('--data_folder', default='../Data/movielen/1m/', type=str)
-parser.add_argument('--train_data', default='train_item.pickle', type=str)
-parser.add_argument('--valid_data', default='test_item.pickle', type=str)
-parser.add_argument('--test_data', default='test_item.pickle', type=str)
+parser.add_argument('--data_action', default='item.pickle', type=str)
+parser.add_argument('--data_cate', default='cate.pickle', type=str)
+parser.add_argument('--data_time', default='time.pickle', type=str)
 parser.add_argument("--is_eval", action='store_true')
 parser.add_argument('--load_model', default=None,  type=str)
 parser.add_argument('--checkpoint_dir', type=str, default='checkpoint')
@@ -111,29 +111,34 @@ def main():
 	output_file = output_file+"_"+str(args.data_name)
 	output_f = open(output_file, "w")
 
-	train_data = args.data_folder+args.train_data
-	valid_data = args.data_folder+args.valid_data
-	test_data = args.data_folder+args.valid_data
+	train_data_action = args.data_folder+"train_"+args.data_action
+	valid_data_action = args.data_folder+"test_"+args.data_action
+	test_data_action = args.data_folder+"test_"+args.data_action
 
-	print("Loading train data from {}".format(train_data))
-	print("Loading valid data from {}".format(valid_data))
-	print("Loading test data from {}\n".format(test_data))
+	print("Loading train data from {}".format(train_data_action))
+	print("Loading valid data from {}".format(valid_data_action))
+	print("Loading test data from {}\n".format(test_data_action))
 
-	output_f.write("Loading train data from {}".format(train_data))
-	output_f.write("Loading valid data from {}".format(valid_data))
-	output_f.write("Loading test data from {}".format(test_data))
+	output_f.write("Loading train data from {}".format(train_data_action))
+	output_f.write("Loading valid data from {}".format(valid_data_action))
+	output_f.write("Loading test data from {}".format(test_data_action))
 	output_f.flush()
 
 	data_name = args.data_name
 
-	train_data = dataset.Dataset(train_data, data_name)
-	valid_data = dataset.Dataset(valid_data, data_name, itemmap=train_data.m_item_map)
-	test_data = dataset.Dataset(test_data, data_name)
+	train_data_time = args.data_folder+"train_"+args.data_time
+	valid_data_time = args.data_folder+"test_"+args.data_time
+	test_data_time = args.data_folder+"test_"+args.data_time
+
+	train_data = dataset.Dataset(train_data_action, train_data_time, data_name)
+	valid_data = dataset.Dataset(valid_data_action, valid_data_time, data_name, itemmap=train_data.m_item_map)
+	test_data = dataset.Dataset(test_data_action, test_data_time, data_name)
 
 	if not args.is_eval:
 		make_checkpoint_dir()
 
 	input_size = len(train_data.items)
+	input_size = input_size + 1
 
 	print("input_size", input_size)
 
@@ -158,10 +163,6 @@ def main():
 
 	n_epochs = args.n_epochs
 	time_sort = args.time_sort
-
-	print("loading train data from {}".format(args.train_data))
-	print("loading valid data from {}".format(args.valid_data))
-	print("loading test data from {}".format(args.test_data))
 	
 	train_data_loader = dataset.DataLoader(train_data, BPTT, batch_size)
 	BPTT_valid = 1
