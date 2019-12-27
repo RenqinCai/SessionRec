@@ -157,14 +157,6 @@ class Trainer(object):
             losses.append(loss_batch.item())
             loss_batch.backward()
             max_norm = 5.0
-            
-            # name = "sampled_logit_batch"
-            # if self.m_batch_iter > 20000:
-            #     print(name, sampled_logit_batch.grad[0])
-            # print("size", sampled_logit_batch.grad.size())
-            # print(torch.max(sampled_logit_batch.grad[0]), torch.min(sampled_logit_batch.grad[0]))
-
-            # self.m_log.addHistogram2Tensorboard(name, sampled_logit_batch.grad[0], self.m_batch_iter)
         
             self.m_batch_iter += 1
 

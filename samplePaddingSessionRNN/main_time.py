@@ -85,9 +85,12 @@ torch.manual_seed(7)
 random.seed(args.seed)
 
 if args.cuda:
+	print("gpu")
 	torch.cuda.manual_seed(args.seed)
+else:
+	print("cpu")
 
-def make_checkpoint_dir():
+def make_checkpoint_dir(log):
 	print("PARAMETER" + "-"*10)
 	now = datetime.datetime.now()
 	S = '{:02d}{:02d}{:02d}{:02d}'.format(now.month, now.day, now.hour, now.minute)
@@ -111,10 +114,12 @@ def make_checkpoint_dir():
 	
 	with open(os.path.join(args.checkpoint_dir, 'parameter.txt'), 'w') as f:
 		for attr, value in sorted(args.__dict__.items()):
-			print("{}={}".format(attr.upper(), value))
+			msg = "{}={}".format(attr.upper(), value)
+			log.addOutput2IO(msg)
 			f.write("{}={}\n".format(attr.upper(), value))
 
-	print("---------" + "-"*10)
+	msg = "---------" + "-"*10
+	log.addOutput2IO(msg)
 
 def init_model(model):
 	if args.sigma is not None:
@@ -211,7 +216,7 @@ def main():
 	test_data_loader = MYDATALOADER(valid_data, batch_size)
 
 	if not args.is_eval:
-		make_checkpoint_dir()
+		make_checkpoint_dir(log)
 
 	if not args.is_eval:
 		

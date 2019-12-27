@@ -17,6 +17,7 @@ class GRU4REC(nn.Module):
     
         self.use_cuda = use_cuda
         self.device = torch.device('cuda' if use_cuda else 'cpu')
+        print("self device", self.device)
         self.m_log = log
         
         self.look_up = nn.Embedding(input_size, self.embedding_dim)
@@ -69,21 +70,6 @@ class GRU4REC(nn.Module):
         ### batch_size*hidden_size
         seq_short_input = action_short_output_mask[first_dim_index, second_dim_index, :]
 
-        # embedded = input
-        # embedded = self.look_up(embedded)
-    
-        # embedded_pad = torch.nn.utils.rnn.pack_padded_sequence(embedded, input_len, batch_first=True)
-
-        # batch_size = embedded_pad.size(0)
-        # hidden_size = self.hidden_size
-
-        # hidden = self.init_hidden(batch_size, hidden_size)
-        # output, hidden = self.gru(embedded_pad, hidden) # (sequence, B, H)
-
-        # last_output = hidden[-1]
-
-        # last_output = last_output.view(-1, last_output.size(-1))  # (B,H)
-
         last_output = seq_short_input
         if self.embedding_dim != self.hidden_size:
             last_output = self.m_fc(seq_short_input)
@@ -113,5 +99,7 @@ class GRU4REC(nn.Module):
         '''
         Initialize the hidden state of the GRU
         '''
+        # print(self.num_layers, batch_size, hidden_size)
         h0 = torch.zeros(self.num_layers, batch_size, hidden_size).to(self.device)
+
         return h0

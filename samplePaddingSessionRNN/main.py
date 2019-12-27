@@ -11,7 +11,7 @@ import os
 import datetime
 from dataset import *
 from loss import *
-from model import *
+from network import *
 from optimizer import *
 from trainer import *
 from torch.utils import data
@@ -23,7 +23,7 @@ import sys
 sys.path.insert(0, '../PyTorch_GBW_LM')
 sys.path.insert(0, '../PyTorch_GBW_LM/log_uniform')
 
-from sparse_model import RNNModel, SampledSoftmax
+from sampledSoftmax import *
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--hidden_size', default=50, type=int)
@@ -219,40 +219,43 @@ def main():
 	if not args.is_eval:
 		ss = SampledSoftmax(output_size, negative_num, embedding_dim, None)
 
-		model = GRU4REC(log, ss, window_size, input_size, hidden_size, output_size,
+		network = GRU4REC(log, ss, input_size, hidden_size, output_size,
 							final_act=final_act,
 							num_layers=num_layers,
 							use_cuda=args.cuda,
-							batch_size=batch_size,
 							dropout_input=dropout_input,
 							dropout_hidden=dropout_hidden,
-							embedding_dim=embedding_dim, 
+							embedding_dim=embedding_dim,
 							shared_embedding=shared_embedding
 							)
 
 		# init weight
 		# See Balazs Hihasi(ICLR 2016), pg.7
 		
-		count_parameters(model)
+		count_parameters(network)
 
-		init_model(model)
+		init_model(network)
 
-		optimizer = Optimizer(model.parameters(),
+		optimizer = Optimizer(network.parameters(),
 								  optimizer_type=optimizer_type,
 								  lr=lr,
 								  weight_decay=weight_decay,
 								  momentum=momentum,
 								  eps=eps)
 
-		loss_function = LossFunction(loss_type=loss_type, use_cuda=args.cuda)
+		c_weights = None
+		# print("c weights", c_weights)
+		loss_function = LossFunction(c_weights=c_weights, loss_type=loss_type, use_cuda=args.cuda)
 
-		trainer = Trainer(log, model,
+		trainer = Trainer(log, network,
 							  train_data=train_data_loader,
 							  eval_data=valid_data_loader,
 							  optim=optimizer,
 							  use_cuda=args.cuda,
 							  loss_func=loss_function,
 							  topk = args.topk,
+							  input_size = input_size,
+							  sample_full_flag = "sample",
 							  args=args)
 
 		trainer.train(0, n_epochs - 1, batch_size)

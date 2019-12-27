@@ -3,29 +3,30 @@ use time to cut sequences
 command 
 python main_time.py --data_folder ../Data/xing/ --train_data train_item.pickle --valid_data test_item.pickle --test_data test_item.pickle --data_name xing --embedding_dim 300 --hidden_size 300 --lr 0.005
 """
+
 import argparse
 import torch
 # import lib
 import numpy as np
 import os
 import datetime
+from dataset import *
 from loss import *
-from network import *
+from model import *
 from optimizer import *
 from trainer import *
 from torch.utils import data
 import pickle
 import sys
-from dataset_time import *
-# from data_time import *
+# from dataset_time_cut import *
+from data_time import *
 from logger import *
-import collections
 
 import sys
 sys.path.insert(0, '../PyTorch_GBW_LM')
 sys.path.insert(0, '../PyTorch_GBW_LM/log_uniform')
 
-from sampledSoftmax import *
+from sparse_model import RNNModel, SampledSoftmax
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--hidden_size', default=50, type=int)
@@ -149,6 +150,7 @@ def main():
 	weight_decay = args.weight_decay
 	momentum = args.momentum
 	eps = args.eps
+	BPTT = args.bptt
 
 	n_epochs = args.n_epochs
 	time_sort = args.time_sort
@@ -182,85 +184,94 @@ def main():
 	valid_start_time = args.valid_start_time
 	test_start_time = args.test_start_time
 
-	st = datetime.datetime.now()
-	data_obj = MYDATA(data_action, data_cate, data_time, valid_start_time, test_start_time, observed_threshold, window_size)
-	et = datetime.datetime.now()
-	print("load data duration ", et-st)
+	# data_pickle = args.data_folder+"dataObj.pickle"
+	# data_f = open(data_pickle, "rb")
 
-	train_data = data_obj.train_dataset
-	valid_data = data_obj.test_dataset
-	test_data = data_obj.test_dataset
+	# data_obj = pickle.load(data_f)
+	# data_f.close()
+
+	# data_obj = Data(data_action, data_cate, data_time, valid_start_time, test_start_time, observed_threshold, window_size)
+	
+	data_obj = MYDATA(data_action, data_cate, data_time, valid_start_time, test_start_time, observed_threshold, window_size)
+
+	# train_data = data_obj.train_dataset
+	# valid_data = data_obj.test_dataset
+	# test_data = data_obj.test_dataset
+
+	# 
+
+	# train_folder = args.data_folder+"/train"
+	# data_obj.save2pickle(data_obj.train_dataset, batch_size, train_folder)
+
+	# test_folder = args.data_folder+"/test"
+	# data_obj.save2pickle(data_obj.test_dataset, batch_size, test_folder)
+
+	# exit()
+	print("data set train")
+	train_folder = args.data_folder+"train"
+	train_data = Dataset(train_folder)
+
+	train_data_loader = MYDATALOADER(train_data, batch_size)
+
+	test_folder = args.data_folder+"test"
+	test_data = Dataset(test_folder)
+
+	test_data_loader = MYDATALOADER(test_data, batch_size)
 
 	print("+"*10)
 	print("valid load")
 
-	input_size = data_obj.items()
-	output_size = input_size
-
-	message = "input_size "+str(input_size)
-	log.addOutput2IO(message)
-
-	negative_num = args.negative_num
-
-	message = "negative_num "+str(negative_num)
-	log.addOutput2IO(message)
-
-	train_data_loader = MYDATALOADER(train_data, batch_size)
-	valid_data_loader = MYDATALOADER(valid_data, batch_size)
-	test_data_loader = MYDATALOADER(valid_data, batch_size)
-
 	if not args.is_eval:
 		make_checkpoint_dir()
+
+	input_size = len(data_obj.items)
+	output_size = input_size
+
+	negative_num = args.negative_num
+	print("input_size", input_size)
+
+	# train_data_loader = dataset.DataLoader(train_data, batch_size)
+	# valid_data_loader = dataset.DataLoader(valid_data, batch_size)
+	# test_data_loader = dataset.DataLoader(test_data, batch_size)
 
 	if not args.is_eval:
 		
 		ss = SampledSoftmax(output_size, negative_num, embedding_dim, None)
 
-		network = GRU4REC(log, ss, input_size, hidden_size, output_size,
+		model = GRU4REC(log, ss, window_size, input_size, hidden_size, output_size,
 							final_act=final_act,
 							num_layers=num_layers,
 							use_cuda=args.cuda,
+							batch_size=batch_size,
 							dropout_input=dropout_input,
 							dropout_hidden=dropout_hidden,
-							embedding_dim=embedding_dim,
+							embedding_dim=embedding_dim, 
 							shared_embedding=shared_embedding
 							)
 
 		# init weight
 		# See Balazs Hihasi(ICLR 2016), pg.7
 		
-		count_parameters(network)
+		count_parameters(model)
 
-		init_model(network)
+		init_model(model)
 
-		optimizer = Optimizer(network.parameters(),
+		optimizer = Optimizer(model.parameters(),
 								  optimizer_type=optimizer_type,
 								  lr=lr,
 								  weight_decay=weight_decay,
 								  momentum=momentum,
 								  eps=eps)
 
-		# c_weight_map = dict(collections.Counter(train_data.m_y_action))
-		# c_weights = [1.0 for i in range(output_size)]
-		# for c_i in range(1, output_size):
-		# 	c_weights[c_i] = len(train_data.m_y_action)/c_weight_map[c_i]
-		# 	# np.array([1.0 for i in range(output_size)])
-		# c_weights = np.log(np.array(c_weights))
-		# c_weights[0] = 0.0
-		# c_weights[1] = 0.5
-		c_weights = np.array([1.0 for i in range(output_size)])
-		print("c weights", c_weights)
-		loss_function = LossFunction(c_weights=c_weights, loss_type=loss_type, use_cuda=args.cuda)
+		loss_function = LossFunction(loss_type=loss_type, use_cuda=args.cuda)
 
-		trainer = Trainer(log, network,
+		trainer = Trainer(log, model,
 							  train_data=train_data_loader,
 							  eval_data=test_data_loader,
 							  optim=optimizer,
 							  use_cuda=args.cuda,
 							  loss_func=loss_function,
 							  topk = args.topk,
-							  sample_full_flag = "full",
-							  input_size = input_size,
 							  args=args)
 
 		trainer.train(0, n_epochs - 1, batch_size)

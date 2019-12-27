@@ -303,7 +303,7 @@ class MYDATALOADER(object):
 		print("shuffling")
 
 		temp = self.m_temp
-		random.shuffle(temp)
+# 		random.shuffle(temp)
 
 		# x_long_cateNum_list, x_long_cate_action_list, x_long_cate_actionNum_list, x_long_cate_list, x_short_action_list, x_short_cate_list, x_short_actionNum_list, y_action, y_cate, y_action_idx = zip(*temp)
 
@@ -328,8 +328,8 @@ class MYDATALOADER(object):
 			# y_cate_batch = y_cate[batch_index]
 			y_action_idx_batch = y_action_idx[batch_index]
 
-			if batch_index %4000 == 0:
-				print("batch index", batch_index)
+			# if batch_index %4000 == 0:
+			# 	print("batch index", batch_index)
 
 			# x_long_cate_action_batch = []
 			# x_long_cate_actionNum_batch = []
