@@ -158,4 +158,5 @@ class MYDATALOADER(object):
             batch_y = torch.tensor(batch_y)
             batch_y_id = torch.tensor(batch_y_id)
 
+            # yield batch_self_src, batch_y, batch_y_id
             yield batch_self_src, batch_common_src, batch_common_time, batch_friend_diff_src, batch_friend_num, batch_y, batch_y_id

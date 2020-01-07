@@ -185,6 +185,10 @@ def main():
 
 	observed_threshold = args.test_observed
 	
+	# train_corpus_file = args.data_folder+args.data_action+"_train_debug.pickle"
+	# valid_corpus_file = args.data_folder+args.data_action+"_valid_debug.pickle"
+	# test_corpus_file = args.data_folder+args.data_action+"_test_debug.pickle"
+
 	train_corpus_file = args.data_folder+args.data_action+"_train.pickle"
 	valid_corpus_file = args.data_folder+args.data_action+"_valid.pickle"
 	test_corpus_file = args.data_folder+args.data_action+"_test.pickle"

@@ -32,6 +32,7 @@ class Evaluation(object):
 
 			for batch_self_src, batch_common_src, batch_common_time, batch_friend_diff_src, batch_friend_num, batch_y, batch_y_id in dataloader:
 
+			# for batch_self_src, batch_y, batch_y_id in dataloader:
 				if train_test_flag == "train":
 					eval_flag = random.randint(1,101)
 					if eval_flag != 10:
@@ -47,6 +48,8 @@ class Evaluation(object):
 				warm_start_mask = (batch_y_id>=self.warm_start)
 	
 				output_batch = self.model(batch_self_src, batch_common_src, batch_common_time, batch_friend_diff_src, batch_friend_num, batch_friend_num_tensor)
+
+				# output_batch = self.model(batch_self_src)
 
 				sampled_logit_batch, sampled_target_batch = self.model.m_ss(output_batch, batch_y, None, None, None, None, None, None, "full")
 

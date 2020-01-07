@@ -117,6 +117,7 @@ class Trainer(object):
         batch_index = 0
 
         for batch_self_src, batch_common_src, batch_common_time, batch_friend_diff_src, batch_friend_num, batch_y, batch_y_id in dataloader:
+        # for batch_self_src, batch_y, batch_y_id in dataloader:
             
             sample_ids = None 
             true_freq = None
@@ -146,6 +147,7 @@ class Trainer(object):
             self.optim.zero_grad()
 
             output_batch = self.model(batch_self_src, batch_common_src, batch_common_time, batch_friend_diff_src, batch_friend_num, batch_friend_num_tensor)
+            # output_batch = self.model(batch_self_src)
 
             # print("output_batch", output_batch.size(), batch_y.size())
 
