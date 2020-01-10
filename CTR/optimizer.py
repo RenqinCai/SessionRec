@@ -60,8 +60,8 @@ class Optimizer:
         print("learning rate: {:.6f}".format(self.optimizer.param_groups[0]['lr']))
         
 def linear_threshold_scheduler(epoch):
-    if epoch > 5:
-        return 1.0
+    if epoch > 10:
+        return 10.0
     else:
         return epoch
 

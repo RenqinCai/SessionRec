@@ -61,7 +61,7 @@ def evaluate(indices, targets, mask, k=20, debug=False):
     """
     
     _, indices = torch.topk(indices, k, -1)
-    
+
     indices = indices.cpu()
     targets = targets.cpu()
     # print("topK", _)

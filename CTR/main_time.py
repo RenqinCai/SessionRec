@@ -16,7 +16,7 @@ from trainer import *
 from torch.utils import data
 import pickle
 import sys
-from dataset_time import *
+from dataset_time_new import *
 from dataset_time import _seq_corpus, _seq
 # from data_time import *
 from logger import *
@@ -200,24 +200,55 @@ def main():
 	# # test_seq_corpus = movielen_1m_data["test"]
 	# test_seq_corpus = valid_seq_corpus
 
+	start_time = datetime.datetime.now()
 	train_seq_corpus = pickle.load(train_corpus_f)
+	end_time = datetime.datetime.now()
+	print("load pickle duration", end_time-start_time)
+
+	start_time = datetime.datetime.now()
 	valid_seq_corpus = pickle.load(valid_corpus_f)
+	end_time = datetime.datetime.now()
+	print("load pickle duration", end_time-start_time)
+
+	start_time = datetime.datetime.now()
 	test_seq_corpus = pickle.load(test_corpus_f)
+	end_time = datetime.datetime.now()
+	print("load pickle duration", end_time-start_time)
 	# test_seq_corpus = valid_seq_corpus
-
-	train_data_loader = MYDATALOADER(train_seq_corpus, batch_size, "train")
-	valid_data_loader = MYDATALOADER(valid_seq_corpus, batch_size, "valid")
-	test_data_loader = valid_data_loader
-	# test_data_loader = MYDATALOADER(test_seq_corpus, batch_size, "test")
-
 	train_corpus_f.close()
 	valid_corpus_f.close()
 	test_corpus_f.close()
 
+	start_time = datetime.datetime.now()
+	train_data = MYDATASET(train_seq_corpus, batch_size, "train")
+	valid_data = MYDATASET(valid_seq_corpus, batch_size, "valid")
+	# MYDATASET(train_seq_corpus, batch_size, "train")
+	end_time = datetime.datetime.now()
+	print("dataset duration", end_time-start_time)
+
+	start_time = datetime.datetime.now()
+	train_data_loader = MYDATALOADER(train_data.f_set_bucket())
+	end_time = datetime.datetime.now()
+	print("dataloader duration", end_time-start_time)
+
+	start_time = datetime.datetime.now()
+	valid_data_loader = MYDATALOADER(valid_data.f_set_bucket())
+	test_data_loader = valid_data_loader
+	end_time = datetime.datetime.now()
+	print("dataloader duration", end_time-start_time)
+
+	# train_data_loader = MYDATALOADER(train_seq_corpus, batch_size, "train")
+	# valid_data_loader = MYDATALOADER(valid_seq_corpus, batch_size, "valid")
+	# test_data_loader = valid_data_loader
+	# test_data_loader = MYDATALOADER(test_seq_corpus, batch_size, "test")
+
+	
 	print("+"*10)
 	print("valid load")
 
-	input_size = train_data_loader.m_words_num
+	# exit()
+
+	input_size = train_data.f_get_voc_size()
 	output_size = input_size
 
 	message = "input_size "+str(input_size)

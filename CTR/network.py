@@ -88,41 +88,42 @@ class CTR(nn.Module):
         ### obtain the decay rate
         ### common_x size: (batch_size*friend_num)*common_num*hidden_size
         ### friend_decay_rate size: batch_size*friend_num
-        friend_decay_rate = self.m_decay_rate_module(common_x, friend_num_src, common_src_mask)
+        # friend_decay_rate = self.m_decay_rate_module(common_x, friend_num_src, common_src_mask)
         # print("friend decay rate size", friend_decay_rate.size())
 
         ### obtain the friendship
         ### common_x size: (batch_size*friend_num)*common_num*hidden_size
         ### friendship: batch_size*friend_num
-        friendship = self.m_friendship_module(common_x, self_x, common_time, friend_num_src, friend_num_src_tensor, common_src_mask)
+        # friendship = self.m_friendship_module(common_x, self_x, common_time, friend_num_src, friend_num_src_tensor, common_src_mask)
 
         ### decay_friendship
         ### decay_friendship size: batch_size*friend_num
-        decay_friendship = friendship*friend_decay_rate
+        # decay_friendship = friendship*friend_decay_rate
 
         ### normalized_decay_friendship size: batch_size*friend_num
-        normalized_decay_friendship = F.softmax(decay_friendship, dim=-1)
+        # normalized_decay_friendship = F.softmax(decay_friendship, dim=-1)
 
         ### obtain the friend attn
         ### friend_diff_x size: (batch_size*friend_num)*diff_num*hidden_size
         ### friend_x size: batch_size*friend_num*hidden_size
-        friend_x = self.m_friend_attn_module(friend_diff_x, self_x, friend_num_src, friend_num_src_tensor, friend_diff_src_mask)
+        # friend_x = self.m_friend_attn_module(friend_diff_x, self_x, friend_num_src, friend_num_src_tensor, friend_diff_src_mask)
 
         ### decay_friendship weighted friend x
         ### normalized_decay_friendship: batch_size*friend_num*1
         ### decay_friend_x size: batch_size*friend_num*hidden_size
-        normalized_decay_friendship = normalized_decay_friendship.unsqueeze(-1)
-        decay_friend_x = normalized_decay_friendship*friend_x
+        # normalized_decay_friendship = normalized_decay_friendship.unsqueeze(-1)
+        # decay_friend_x = normalized_decay_friendship*friend_x
 
         ### decay_friend_x size: batch_size*1*hidden_size
-        decay_friend_x = torch.sum(decay_friend_x, dim=1)
-        decay_friend_x = decay_friend_x.squeeze(1)
+        # decay_friend_x = torch.sum(decay_friend_x, dim=1)
+        # decay_friend_x = decay_friend_x.squeeze(1)
 
         ### self_x size: batch_size*hidden_size
         ### weighted_friend_x: batch_size*hidden_size
         ### output size: 
-        output = torch.cat([self_x, decay_friend_x], dim=-1)
+        # output = torch.cat([self_x, decay_friend_x], dim=-1)
 
+        output = self_x
         if output.size()[-1] != self.m_hidden_size:
             output = self.m_output_relu(self.m_output_fc(output))
 
