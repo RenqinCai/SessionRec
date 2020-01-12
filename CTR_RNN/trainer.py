@@ -15,14 +15,14 @@ sys.path.insert(0, '../PyTorch_GBW_LM/log_uniform')
 from log_uniform import LogUniformSampler
 
 class Trainer(object):
-    def __init__(self, log, model, train_data, eval_data, optim, use_cuda, loss_func, topk, sample_full_flag, input_size, args):
+    def __init__(self, log, model, train_data, eval_data, optim, use_cuda, multiGPU, loss_func, topk, sample_full_flag, input_size, args):
         self.model = model
         self.train_data = train_data
         self.eval_data = eval_data
         self.optim = optim
         self.loss_func = loss_func
         self.topk = topk
-        self.evaluation = Evaluation(log, self.model, self.loss_func, use_cuda, self.topk, warm_start=args.warm_start)
+        self.evaluation = Evaluation(log, self.model, self.loss_func, use_cuda, multiGPU, self.topk, warm_start=args.warm_start)
         self.device = torch.device('cuda' if use_cuda else 'cpu')
         self.args = args
         self.m_log = log
@@ -38,6 +38,8 @@ class Trainer(object):
         self.m_sampler = LogUniformSampler(input_size)
         self.m_nsampled = args.negative_num
         self.m_remove_match = True
+
+        self.m_multiGPU = multiGPU
 
     def saveModel(self, epoch, loss, recall, mrr):
         checkpoint = {
@@ -116,6 +118,8 @@ class Trainer(object):
 
         batch_index = 0
 
+        st = datetime.datetime.now()
+
         for batch_self_src, batch_common_src, batch_common_time, batch_friend_diff_src, batch_friend_num, batch_y, batch_y_id in dataloader:
         # for batch_self_src, batch_y, batch_y_id in dataloader:
             
@@ -134,6 +138,12 @@ class Trainer(object):
                     acc_hits = self.m_sampler.accidental_match(batch_y, sample_ids)
                     acc_hits = list(zip(*acc_hits))
 
+            ### self_src: batch_size*seq_len
+            ### common_src: (batch_size*friend_num)*common_num
+            ### common_time: (batch_size*friend_num)*common_num
+            ### friend_src: (batch_size*friend_num)*seq_len
+            ### friend_num_src: batch_size*1
+
             batch_self_src = batch_self_src.to(self.device)
             batch_common_src = batch_common_src.to(self.device)
             batch_common_time = batch_common_time.to(self.device)
@@ -141,22 +151,56 @@ class Trainer(object):
             batch_friend_num_tensor = torch.tensor(batch_friend_num).to(self.device)
             batch_y = batch_y.to(self.device)
 
+            if self.m_multiGPU:
+                batch_common_src = torch.split(batch_common_src, split_size_or_sections=batch_friend_num, dim=0)
+                batch_common_src = torch.nn.utils.rnn.pad_sequence(batch_common_src, batch_first=True)
+
+                batch_common_time = torch.split(batch_common_time, split_size_or_sections=batch_friend_num, dim=0)
+                batch_common_time = torch.nn.utils.rnn.pad_sequence(batch_common_time, batch_first=True)
+
+                batch_friend_diff_src = torch.split(batch_friend_diff_src, split_size_or_sections=batch_friend_num, dim=0)
+                batch_friend_diff_src = torch.nn.utils.rnn.pad_sequence(batch_friend_diff_src, batch_first=True)
+
+                batch_friend_num_tensor = batch_friend_num_tensor.unsqueeze(-1)
+
             if batch_index%10000 == 0:
                 print("batch_index", batch_index)
            
             self.optim.zero_grad()
 
-            output_batch = self.model(batch_self_src, batch_common_src, batch_common_time, batch_friend_diff_src, batch_friend_num, batch_friend_num_tensor)
+            # print("input size", batch_self_src.size())
+
+            st = datetime.datetime.now()
+
+            output_batch = self.model(batch_self_src, batch_common_src, batch_common_time, batch_friend_diff_src, batch_friend_num_tensor)
+
+            et = datetime.datetime.now()
+            duration = et-st
+            print('model duration', duration)
+
+            # print("output size", output_batch.size())
             # output_batch = self.model(batch_self_src)
 
             # print("output_batch", output_batch.size(), batch_y.size())
 
-            if self.m_sample_full_flag == "sample":
-                sampled_logit_batch, sampled_target_batch = self.model.m_ss(output_batch, batch_y, sample_ids, true_freq, sample_freq, acc_hits, self.device, self.m_remove_match, "sample")
+            # if self.m_sample_full_flag == "sample":
+            #     sampled_logit_batch, sampled_target_batch = self.model.m_ss(output_batch, batch_y, sample_ids, true_freq, sample_freq, acc_hits, self.device, self.m_remove_match, "sample")
             
-            if self.m_sample_full_flag == "full":
-                sampled_logit_batch, sampled_target_batch = self.model.m_ss(output_batch, batch_y, sample_ids, true_freq, sample_freq, acc_hits, self.device, self.m_remove_match, "full")
-        
+            # if self.m_sample_full_flag == "full":
+            #     sampled_logit_batch, sampled_target_batch = self.model.m_ss(output_batch, batch_y, sample_ids, true_freq, sample_freq, acc_hits, self.device, self.m_remove_match, "full")
+
+            st = datetime.datetime.now()
+
+            if self.m_multiGPU:
+                sampled_logit_batch, sampled_target_batch = self.model.module.sample_loss(output_batch, batch_y, sample_ids, true_freq, sample_freq, acc_hits, self.m_remove_match, self.m_sample_full_flag)
+            else:
+                sampled_logit_batch, sampled_target_batch = self.model.sample_loss(output_batch, batch_y, sample_ids, true_freq, sample_freq, acc_hits, self.m_remove_match, self.m_sample_full_flag)
+
+            et = datetime.datetime.now()
+            duration = et-st
+            print('ss duration', duration)
+            # sampled_logit_batch, sampled_target_batch = self.model.sample_loss(output_batch, batch_y, sample_ids, true_freq, sample_freq, acc_hits, self.m_remove_match, self.m_sample_full_flag)
+
             loss_batch = self.loss_func(sampled_logit_batch, sampled_target_batch)
             losses.append(loss_batch.item())
             loss_batch.backward()
@@ -169,12 +213,17 @@ class Trainer(object):
             self.optim.step()
 
             batch_index += 1
+            # exit()
             # et = datetime.datetime.now()
             # print("duration batch", et-st)
         # for name, param in self.model.named_parameters():
         #     if name == "m_ss.params.bias":
         # param = self.model.
         # self.m_log.addHistogram2Tensorboard(name, param.clone().cpu().data.numpy(), epoch)
+
+        et = datetime.datetime.now()
+        duration = et-st
+        print('duration', duration)
 
         mean_losses = np.mean(losses)
         return mean_losses

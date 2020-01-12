@@ -59,10 +59,10 @@ class _seq:
 
 class MYDATALOADER(object):
     def __init__(self, seq_corpus, batch_size, train_valid_test_flag):
-        self.m_seq_corpus = seq_corpus
+        self.m_seq_list = seq_corpus
         self.m_batch_size = batch_size
 
-        self.m_seq_num = len(self.m_seq_corpus.m_seq_list)
+        self.m_seq_num = len(self.m_seq_list)
         self.m_batch_num = self.m_seq_num//batch_size
 
         self.m_words_num = 0
@@ -74,7 +74,7 @@ class MYDATALOADER(object):
 
     def f_process_time(self):
         for seq_index in range(self.m_seq_num):
-            seq_obj = self.m_seq_corpus.m_seq_list[seq_index]
+            seq_obj = self.m_seq_list[seq_index]
 
             new_neigh_common_time_list = []
             for common_time_list in seq_obj.m_neigh_common_time_list:
@@ -91,7 +91,7 @@ class MYDATALOADER(object):
         vocab_map = {}
         vocab_map['<PAD>'] = 0
         for seq_index in range(self.m_seq_num):
-            seq_obj = self.m_seq_corpus.m_seq_list[seq_index]
+            seq_obj = self.m_seq_list[seq_index]
 
             for item in seq_obj.m_item_list:
                 if item not in vocab_map:
@@ -102,10 +102,10 @@ class MYDATALOADER(object):
 
     def __iter__(self):
         print("shuffling")
-        random.shuffle(self.m_seq_corpus.m_seq_list)
+        random.shuffle(self.m_seq_list)
 
         for batch_index in range(self.m_batch_num):
-            batch_seq_list = self.m_seq_corpus.m_seq_list[batch_index*self.m_batch_size:(batch_index+1)*self.m_batch_size]
+            batch_seq_list = self.m_seq_list[batch_index*self.m_batch_size:(batch_index+1)*self.m_batch_size]
 
             batch_y = []
             batch_self_src = []
@@ -140,7 +140,7 @@ class MYDATALOADER(object):
             batch_max_len_common_src = max([len(i) for i in batch_common_src])
             batch_max_len_common_time = max([len(i) for i in batch_common_time])
             batch_max_len_friend_diff_src = max([len(i) for i in batch_friend_diff_src])
-            
+
             ### padding
 
             batch_self_src = [i+[0]*(batch_max_len_self_src-len(i)) for i in batch_self_src]

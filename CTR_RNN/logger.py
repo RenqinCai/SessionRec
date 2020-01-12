@@ -15,7 +15,7 @@ class Logger():
 		
 		hidden_size = args.hidden_size
 		batch_size = args.batch_size
-		embedding_dim = args.batch_size
+		embedding_dim = args.embedding_dim
 		optimizer_type = args.optimizer_type
 		lr = args.lr
 		window_size = args.window_size

@@ -38,6 +38,7 @@ class SampledSoftmax(nn.Module):
         # device_id = labels.data.get_device()
 
         batch_size, d = inputs.size()
+        print("batch_size", batch_size)
     
         sample_ids = torch.LongTensor(sample_ids).to(device)
         true_freq = torch.FloatTensor(true_freq).to(device)
@@ -73,7 +74,6 @@ class SampledSoftmax(nn.Module):
 
     def full(self, inputs, labels):
         return self.params(inputs), labels
-
 
 def initialize(matrix):
     in_, out_ = matrix.size()

@@ -12,8 +12,8 @@ import numpy as np
 import os
 import datetime
 from loss import *
-from network import *
-# from network_parallel import *
+# from network import *
+from network_parallel import *
 from optimizer import *
 from trainer import *
 import pickle
@@ -325,18 +325,15 @@ def main():
 
 		# dist.init_process_group(backend=args.dist_backend, init_method=args.dist_url, world_size=args.world_size, rank=args.rank)
 
-		# ngpus_per_node = torch.cuda.device_count()
-		# # gpu_devices = args.gpu_devices
-		# # print("gpu devices", gpu_devices)
+		ngpus_per_node = torch.cuda.device_count()
 
-		# if ngpus_per_node > 1:
-		# 	print("ngpus_per_node", ngpus_per_node)
-		# 	network = nn.DataParallel(network)
-		# elif ngpus_per_node == 0:
-		# 	print("no gpu !!!")
-		# 	exit()
-
-		multiGPU = False
+		multiGPU = True
+		if ngpus_per_node > 1:
+			print("ngpus_per_node", ngpus_per_node)
+			network = nn.DataParallel(network)
+		elif ngpus_per_node == 0:
+			print("no gpu !!!")
+			exit()
 
 		optimizer = Optimizer(network.parameters(),
 		optimizer_type=optimizer_type, lr=lr,weight_decay=weight_decay, momentum=momentum,eps=eps)
@@ -347,8 +344,7 @@ def main():
 
 		trainer = Trainer(log, network,train_data=train_data_loader,eval_data=test_data_loader,
 		optim=optimizer,
-		use_cuda=args.cuda,
-		multiGPU=multiGPU,
+		use_cuda=args.cuda, multiGPU=multiGPU,
 		loss_func=loss_function,
 		topk = args.topk,
 		input_size = input_size,
