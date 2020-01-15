@@ -65,7 +65,7 @@ parser.add_argument('--model_name', default="topkCascadeCategoryRNN", type=str)
 parser.add_argument('--cate_embedding_dim', type=int, default=64)
 parser.add_argument('--cate_hidden_size', type=int, default=64)
 parser.add_argument('--cate_shared_embedding', default=1, type=int)
-parser.add_argument('--beam_size', type=int, default=3)
+parser.add_argument('--beam_size', type=int, default=10)
 
 # Get the arguments
 args = parser.parse_args()
