@@ -32,7 +32,7 @@ def get_recall(indices, targets, mask):
         item = targets[x,0]
         item_recalls[item.item()] += 1
 
-    for item,hit in item_recalls.items():
+    for item, hit in item_recalls.items():
         item_recalls[item] = float(hit) / float(item_counts[item])
 
     recall = float(hits.size(0)) / float( mask.int().sum())
@@ -74,7 +74,7 @@ def get_mrr(indices, targets, mask):
         item_mrrs[item.item()] += rranks[x].item()
 
     for item,rank in item_mrrs.items():
-        item_mrrs[item] = float(rank) / float(item_counts[item])
+        item_mrrs[item] = rank / float(item_counts[item])
 
     mrr = torch.sum(rranks).data / float( mask.int().sum())
     return mrr.item(), item_mrrs

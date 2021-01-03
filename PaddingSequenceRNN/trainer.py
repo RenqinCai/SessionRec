@@ -30,10 +30,10 @@ class Trainer(object):
             print("*"*10, epoch, "*"*5)
             st = time.time()
             train_loss = self.train_epoch(epoch, batch_size)
-            loss, recall, mrr, popularity = self.evaluation.eval(self.train_data, batch_size)
-            print("train Epoch: {}, train loss: {:.4f},  loss: {:.4f},recall: {:.4f}, mrr: {:.4f}, time: {}".format(epoch, train_loss, loss, recall, mrr, time.time() - st))
+            loss, recall, mrr = self.evaluation.eval(self.train_data, batch_size)
+            print("train Epoch: {}, train loss: {:.4f},  loss: {:.4f}, recall: {:.4f}, mrr: {:.4f}, time: {}".format(epoch, train_loss, loss, recall, mrr, time.time() - st))
 
-            loss, recall, mrr, _ = self.evaluation.eval(self.eval_data, batch_size, popularity=popularity)
+            loss, recall, mrr = self.evaluation.eval(self.eval_data, batch_size, popularity="test")
             print("Epoch: {}, loss: {:.4f}, recall: {:.4f}, mrr: {:.4f}, time: {}".format(epoch, loss, recall, mrr, time.time() - st))
 #             checkpoint = {
 #                 'model': self.model.state_dict(),
@@ -59,7 +59,7 @@ class Trainer(object):
             return hidden
        
         dataloader = self.train_data
-        for input_x_batch, target_y_batch, x_len_batch, _ in dataloader:
+        for input_x_batch, target_y_batch, input_t_batch, x_len_batch, _ in dataloader:
             input_x_batch = input_x_batch.to(self.device)
             target_y_batch = target_y_batch.to(self.device)
 
