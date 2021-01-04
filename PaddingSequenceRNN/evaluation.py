@@ -156,6 +156,24 @@ class Evaluation(object):
 			time_fig.savefig("item_time.png")
 		plt.show()
 
+		#Example 3D graph
+		fig = plt.figure()
+		ax1 = fig.add_subplot(121, projection='3d')
+		ax2 = fig.add_subplot(122, projection='3d')
+
+		x1 = [0,0,0,1,1,1,2,2,2,3,3,3,4,4,4,5,5,5,6,6,6]
+		y1 = [1,2,3,1,2,3,1,2,3,1,2,3,1,2,3,1,2,3,1,2,3]
+		z1 = 0
+		dx1 = 1
+		dy1 = 0
+		dz1 = [2,3,4,5,6,7,2,3,4,5,6,7,2,3,4,5,6,7,2,3,4]
+		ax1.bar3d(x1, y1, z1, dx1, dy1, dz1, shade=True)
+		ax1.set_title('Recall of Varying Item Popularities Over Time (RNN Xing)')
+		ax1.set_xlabel('Popularity')
+		ax1.set_ylabel('Time')
+		ax1.set_zlabel('Recall@20')
+		fig.savefig('3dtest.png')
+
 		mean_losses = np.mean(losses)
 		mean_recall = np.average(recalls, weights=weights)
 		mean_mrr = np.average(mrrs, weights=weights)

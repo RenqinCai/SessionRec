@@ -2,6 +2,8 @@ import numpy as np
 import torch
 import dataset
 from metric import *
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 class Evaluation(object):
 	def __init__(self, log, model, loss_func, use_cuda, k=20, warm_start=5):
@@ -64,5 +66,37 @@ class Evaluation(object):
 
 		msg = "total_test_num"+str(np.sum(total_test_num))
 		self.m_log.addOutput2IO(msg)
+
+
+		fig = plt.figure()
+		ax1 = fig.add_subplot(121, projection='3d')
+		ax2 = fig.add_subplot(122, projection='3d')
+
+		x1 = # Popularity bin for each time
+		y1 = # Time bins for each popularity bin
+		z1 = 0
+		dx1 = 1
+		dy1 = 0 # shows bars further back more clearly
+		dz1 = # Performance for each combination of pupularity and time bins
+		ax1.bar3d(x1, y1, z1, dx1, dy1, dz1, shade=True)
+		ax1.set_title('Recall of Varying Item Popularities Over Time (RNN Xing)')
+		ax1.set_xlabel('Popularity')
+		ax1.set_ylabel('Time')
+		ax1.set_zlabel('Recall@20')
+
+		x2 = 
+		y2 =
+		z2 = 0
+		dx2 = 1
+		dy2 = 0
+		dz2 =
+		ax2.bar3d(x2, y2, z2, dx2, dy2, dz2, shade=True)
+		ax2.set_title('MRR of Varying Item Popularities Over Time (RNN Xing)')
+		ax2.set_xlabel('Popularity')
+		ax2.set_ylabel('Time')
+		ax2.set_zlabel('MRR@20')
+
+		fig.savefig('sequential_bias.png')
+
 
 		return mean_losses, mean_recall, mean_mrr
