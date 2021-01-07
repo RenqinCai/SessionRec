@@ -43,11 +43,11 @@ parser.add_argument('--momentum', default=0.1, type=float)
 parser.add_argument('--eps', default=1e-6, type=float)
 
 parser.add_argument("-seed", type=int, default=7,
-					 help="Seed for random initialization")
+                     help="Seed for random initialization")
 parser.add_argument("-sigma", type=float, default=None,
-					 help="init weight -1: range [-sigma, sigma], -2: range [0, sigma]")
+                     help="init weight -1: range [-sigma, sigma], -2: range [0, sigma]")
 parser.add_argument("--embedding_dim", type=int, default=-1,
-					 help="using embedding")
+                     help="using embedding")
 # parse the loss type
 parser.add_argument('--loss_type', default='TOP1', type=str)
 # parser.add_argument('--loss_type', default='BPR', type=str)
@@ -85,190 +85,162 @@ torch.manual_seed(7)
 random.seed(args.seed)
 
 if args.cuda:
-	print("gpu")
-	torch.cuda.manual_seed(args.seed)
+    print("gpu")
+    torch.cuda.manual_seed(args.seed)
 else:
-	print("cpu")
+    print("cpu")
 
 def make_checkpoint_dir(log):
-	print("PARAMETER" + "-"*10)
-	now = datetime.datetime.now()
-	S = '{:02d}{:02d}{:02d}{:02d}'.format(now.month, now.day, now.hour, now.minute)
-	checkpoint_dir = "../log/"+args.model_name+"/"+args.checkpoint_dir
-	args.checkpoint_dir = checkpoint_dir
-	save_dir = os.path.join(args.checkpoint_dir, S)
+    print("PARAMETER" + "-"*10)
+    now = datetime.datetime.now()
+    S = '{:02d}{:02d}{:02d}{:02d}'.format(now.month, now.day, now.hour, now.minute)
+    checkpoint_dir = "../log/"+args.model_name+"/"+args.checkpoint_dir
+    args.checkpoint_dir = checkpoint_dir
+    save_dir = os.path.join(args.checkpoint_dir, S)
 
-	if not os.path.exists("../log"):
-		os.mkdir("../log")
-	
-	if not os.path.exists("../log/"+args.model_name):
-		os.mkdir("../log/"+args.model_name)
+    if not os.path.exists("../log"):
+        os.mkdir("../log")
+    
+    if not os.path.exists("../log/"+args.model_name):
+        os.mkdir("../log/"+args.model_name)
 
-	if not os.path.exists(args.checkpoint_dir):
-		os.mkdir(args.checkpoint_dir)
+    if not os.path.exists(args.checkpoint_dir):
+        os.mkdir(args.checkpoint_dir)
 
-	if not os.path.exists(save_dir):
-		os.mkdir(save_dir)
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
 
-	args.checkpoint_dir = save_dir
-	
-	with open(os.path.join(args.checkpoint_dir, 'parameter.txt'), 'w') as f:
-		for attr, value in sorted(args.__dict__.items()):
-			msg = "{}={}".format(attr.upper(), value)
-			log.addOutput2IO(msg)
-			f.write("{}={}\n".format(attr.upper(), value))
+    args.checkpoint_dir = save_dir
+    
+    with open(os.path.join(args.checkpoint_dir, 'parameter.txt'), 'w') as f:
+        for attr, value in sorted(args.__dict__.items()):
+            msg = "{}={}".format(attr.upper(), value)
+            log.addOutput2IO(msg)
+            f.write("{}={}\n".format(attr.upper(), value))
 
-	msg = "---------" + "-"*10
-	log.addOutput2IO(msg)
+    msg = "---------" + "-"*10
+    log.addOutput2IO(msg)
 
 def init_model(model):
-	if args.sigma is not None:
-		for p in model.parameters():
-			if args.sigma != -1 and args.sigma != -2:
-				sigma = args.sigma
-				p.data.uniform_(-sigma, sigma)
-			elif len(list(p.size())) > 1:
-				sigma = np.sqrt(6.0 / (p.size(0) + p.size(1)))
-				if args.sigma == -1:
-					p.data.uniform_(-sigma, sigma)
-				else:
-					p.data.uniform_(0, sigma)
+    if args.sigma is not None:
+        for p in model.parameters():
+            if args.sigma != -1 and args.sigma != -2:
+                sigma = args.sigma
+                p.data.uniform_(-sigma, sigma)
+            elif len(list(p.size())) > 1:
+                sigma = np.sqrt(6.0 / (p.size(0) + p.size(1)))
+                if args.sigma == -1:
+                    p.data.uniform_(-sigma, sigma)
+                else:
+                    p.data.uniform_(0, sigma)
 
 def count_parameters(model):
-	parameter_num = sum(p.numel() for p in model.parameters() if p.requires_grad)
-	print("parameter_num", parameter_num) 
+    parameter_num = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print("parameter_num", parameter_num) 
 
 def main():
+    BPTT = args.bptt
 
-	hidden_size = args.hidden_size
-	num_layers = args.num_layers
-	batch_size = args.batch_size
-	dropout_input = args.dropout_input
-	dropout_hidden = args.dropout_hidden
-	embedding_dim = args.embedding_dim
-	final_act = args.final_act
-	loss_type = args.loss_type
-	topk = args.topk
-	optimizer_type = args.optimizer_type
-	lr = args.lr
-	weight_decay = args.weight_decay
-	momentum = args.momentum
-	eps = args.eps
-	BPTT = args.bptt
+    device = torch.device('cuda' if args.cuda else 'cpu')
+    print("device", device)
 
-	n_epochs = args.n_epochs
-	time_sort = args.time_sort
+    log = Logger()
+    log.addIOWriter(args)
 
-	window_size = args.window_size
-	shared_embedding = args.shared_embedding
+    msg = "main_time.py "
+    msg += "shared_embedding"+str(args.shared_embedding)
+    log.addOutput2IO(msg)
 
-	log = Logger()
-	log.addIOWriter(args)
+    if args.embedding_dim == -1:
+        msg = "embedding dim not -1 "+str(args.embedding_dim)
+        log.addOutput2IO(msg)
+        raise AssertionError()
 
-	msg = "main_time.py "
-	msg += "shared_embedding"+str(shared_embedding)
-	log.addOutput2IO(msg)
+    data_name = args.data_name
 
-	if embedding_dim == -1:
-		msg = "embedding dim not -1 "+str(embedding_dim)
-		log.addOutput2IO(msg)
-		raise AssertionError()
+    print("*"*10+"train load"+"*"*10)
 
-	data_name = args.data_name
+    observed_threshold = args.test_observed
 
-	print("*"*10)
-	print("train load")
+    data_action = args.data_folder+args.data_action
+    data_cate = args.data_folder+args.data_cate
+    data_time = args.data_folder+args.data_time
+    
+    valid_start_time = args.valid_start_time
+    test_start_time = args.test_start_time
 
-	observed_threshold = args.test_observed
+    st = datetime.datetime.now()
+    data_obj = MYDATA(data_action, data_cate, data_time, valid_start_time, test_start_time, observed_threshold, args.window_size)
+    et = datetime.datetime.now()
+    print("load data duration ", et-st)
 
-	data_action = args.data_folder+args.data_action
-	data_cate = args.data_folder+args.data_cate
-	data_time = args.data_folder+args.data_time
-	
-	valid_start_time = args.valid_start_time
-	test_start_time = args.test_start_time
+    train_data = data_obj.train_dataset
+    valid_data = data_obj.test_dataset
+    test_data = data_obj.test_dataset
 
-	st = datetime.datetime.now()
-	data_obj = MYDATA(data_action, data_cate, data_time, valid_start_time, test_start_time, observed_threshold, window_size)
-	et = datetime.datetime.now()
-	print("load data duration ", et-st)
+    print("+"*10+"valid load"+"+"*10)
 
-	train_data = data_obj.train_dataset
-	valid_data = data_obj.test_dataset
-	test_data = data_obj.test_dataset
+    input_size = data_obj.items()
+    output_size = input_size
 
-	print("+"*10)
-	print("valid load")
+    message = "input_size "+str(input_size)
+    log.addOutput2IO(message)
 
-	input_size = data_obj.items()
-	output_size = input_size
+    negative_num = args.negative_num
 
-	message = "input_size "+str(input_size)
-	log.addOutput2IO(message)
+    message = "negative_num "+str(negative_num)
+    log.addOutput2IO(message)
 
-	negative_num = args.negative_num
+    train_data_loader = MYDATALOADER(train_data, args.batch_size)
+    valid_data_loader = MYDATALOADER(valid_data, args.batch_size)
+    test_data_loader = MYDATALOADER(valid_data, args.batch_size)
 
-	message = "negative_num "+str(negative_num)
-	log.addOutput2IO(message)
+    if not args.is_eval:
+        make_checkpoint_dir(log)
 
-	train_data_loader = MYDATALOADER(train_data, batch_size)
-	valid_data_loader = MYDATALOADER(valid_data, batch_size)
-	test_data_loader = MYDATALOADER(valid_data, batch_size)
+    if not args.is_eval:
+        
+        ss = SampledSoftmax(output_size, negative_num, args.embedding_dim, None)
 
-	if not args.is_eval:
-		make_checkpoint_dir(log)
+        network = NETWORK(input_size, ss, args, device)
 
-	if not args.is_eval:
-		
-		ss = SampledSoftmax(output_size, negative_num, embedding_dim, None)
+        # init weight
+        # See Balazs Hihasi(ICLR 2016), pg.7
+        
+        count_parameters(network)
 
-		network = GRU4REC(log, ss, input_size, hidden_size, output_size,
-							final_act=final_act,
-							num_layers=num_layers,
-							use_cuda=args.cuda,
-							dropout_input=dropout_input,
-							dropout_hidden=dropout_hidden,
-							embedding_dim=embedding_dim,
-							shared_embedding=shared_embedding
-							)
+        init_model(network)
 
-		# init weight
-		# See Balazs Hihasi(ICLR 2016), pg.7
-		
-		count_parameters(network)
+        optimizer = Optimizer(network.parameters(),
+                                  optimizer_type=args.optimizer_type,
+                                  lr=args.lr,
+                                  weight_decay=args.weight_decay,
+                                  momentum=args.momentum,
+                                  eps=args.eps)
 
-		init_model(network)
+        
+        # c_weight_map = dict(collections.Counter(train_data.m_y_action))
+        # c_weights = [0 for i in range(output_size)]
+        # for c_i in range(1, output_size):
+        # 	c_weights[c_i] = len(train_data.m_y_action)/c_weight_map[c_i]
 
-		optimizer = Optimizer(network.parameters(),
-								  optimizer_type=optimizer_type,
-								  lr=lr,
-								  weight_decay=weight_decay,
-								  momentum=momentum,
-								  eps=eps)
+        c_weights = None
+        # print("c weights", c_weights)
+        loss_function = LossFunction(device, loss_type=args.loss_type)
 
-		
-		# c_weight_map = dict(collections.Counter(train_data.m_y_action))
-		# c_weights = [0 for i in range(output_size)]
-		# for c_i in range(1, output_size):
-		# 	c_weights[c_i] = len(train_data.m_y_action)/c_weight_map[c_i]
+        trainer = Trainer(log, network,
+                              train_data=train_data_loader,
+                              eval_data=test_data_loader,
+                              optim=optimizer,
+                              device=device,
+                              loss_func=loss_function,
+                              topk = args.topk,
+                              input_size = input_size,
+                              sample_full_flag = "sample",
+                              args=args)
 
-		c_weights = None
-		# print("c weights", c_weights)
-		loss_function = LossFunction(loss_type=loss_type, use_cuda=args.cuda)
-
-		trainer = Trainer(log, network,
-							  train_data=train_data_loader,
-							  eval_data=test_data_loader,
-							  optim=optimizer,
-							  use_cuda=args.cuda,
-							  loss_func=loss_function,
-							  topk = args.topk,
-							  input_size = input_size,
-							  sample_full_flag = "sample",
-							  args=args)
-
-		trainer.train(0, n_epochs - 1, batch_size)
+        trainer.train(0, args.n_epochs - 1, args.batch_size)
 
 
 if __name__ == '__main__':
-	main()
+    main()

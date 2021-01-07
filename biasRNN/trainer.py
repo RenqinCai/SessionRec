@@ -15,15 +15,15 @@ sys.path.insert(0, '../PyTorch_GBW_LM/log_uniform')
 from log_uniform import LogUniformSampler
 
 class Trainer(object):
-    def __init__(self, log, model, train_data, eval_data, optim, use_cuda, loss_func, topk, sample_full_flag, input_size, args):
+    def __init__(self, log, model, train_data, eval_data, optim, device, loss_func, topk, sample_full_flag, input_size, args):
         self.model = model
         self.train_data = train_data
         self.eval_data = eval_data
         self.optim = optim
         self.loss_func = loss_func
         self.topk = topk
-        self.evaluation = Evaluation(log, self.model, self.loss_func, use_cuda, self.topk, warm_start=args.warm_start)
-        self.device = torch.device('cuda' if use_cuda else 'cpu')
+        self.device = device
+        self.evaluation = Evaluation(log, self.model, self.loss_func, self.device, self.topk, warm_start=args.warm_start)
         self.args = args
         self.m_log = log
         self.m_sample_full_flag = sample_full_flag
@@ -68,7 +68,7 @@ class Trainer(object):
 
             st = time.time()
             train_loss = self.train_epoch(epoch, batch_size)
-            loss, recall, mrr = self.evaluation.eval(self.train_data, batch_size, "train")
+            loss, recall, mrr = self.evaluation.eval(self.train_data, "train")
            
             msg = "train Epoch: {}, train loss: {:.4f},  loss: {:.4f},recall: {:.4f}, mrr: {:.4f}, time: {}".format(epoch, train_loss, loss, recall, mrr, time.time() - st)
             self.m_log.addOutput2IO(msg)
@@ -76,7 +76,7 @@ class Trainer(object):
             self.m_log.addScalar2Tensorboard("train_loss_eval", loss, epoch)
             self.m_log.addScalar2Tensorboard('train_recall', recall, epoch)
             self.m_log.addScalar2Tensorboard("train_mrr", mrr, epoch)           
-            loss, recall, mrr = self.evaluation.eval(self.eval_data, batch_size, "test")
+            loss, recall, mrr = self.evaluation.eval(self.eval_data, "test")
             msg = "Epoch: {}, loss: {:.4f}, recall: {:.4f}, mrr: {:.4f}, time: {}".format(epoch, loss, recall, mrr, time.time() - st)
             self.m_log.addOutput2IO(msg)
             self.m_log.addScalar2Tensorboard("test_loss", loss, epoch)
@@ -116,7 +116,7 @@ class Trainer(object):
 
         batch_index = 0
 
-        for x_short_action_batch, mask_short_action_batch, pad_x_short_actionNum_batch, y_action_batch, y_action_idx_batch in dataloader:
+        for x_short_action_batch, mask_short_action_batch, pad_x_short_actionNum_batch, y_action_batch, y_action_idx_batch, t_y_batch in dataloader:
             
             sample_ids = None 
             true_freq = None
