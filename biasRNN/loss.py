@@ -5,13 +5,13 @@ import torch.nn.functional as F
 
 
 class LossFunction(nn.Module):
-    def __init__(self, loss_type='TOP1', use_cuda=True):
+    def __init__(self, device, loss_type='TOP1'):
         """ An abstract loss function that can supports custom loss functions compatible with PyTorch."""
         super(LossFunction, self).__init__()
         self.loss_type = loss_type
-        self.use_cuda = use_cuda
+        # self.use_cuda = use_cuda
 
-        self.device = torch.device('cuda' if use_cuda else 'cpu')
+        self.m_device = device
 
         if loss_type == 'XE':
             self._loss_fn = SampledCrossEntropyLoss()
@@ -28,7 +28,6 @@ class LossFunction(nn.Module):
 
     def forward(self, logit, target):
         return self._loss_fn(logit, target)
-
 
 class SampledCrossEntropyLoss(nn.Module):
     """ CrossEntropyLoss with n_classes = batch_size = the number of samples in the session-parallel mini-batch """

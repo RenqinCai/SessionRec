@@ -43,11 +43,11 @@ parser.add_argument('--momentum', default=0.1, type=float)
 parser.add_argument('--eps', default=1e-6, type=float)
 
 parser.add_argument("-seed", type=int, default=7,
-					 help="Seed for random initialization")
+                     help="Seed for random initialization")
 parser.add_argument("-sigma", type=float, default=None,
-					 help="init weight -1: range [-sigma, sigma], -2: range [0, sigma]")
+                     help="init weight -1: range [-sigma, sigma], -2: range [0, sigma]")
 parser.add_argument("--embedding_dim", type=int, default=-1,
-					 help="using embedding")
+                     help="using embedding")
 # parse the loss type
 parser.add_argument('--loss_type', default='TOP1', type=str)
 # parser.add_argument('--loss_type', default='BPR', type=str)
@@ -85,184 +85,155 @@ torch.manual_seed(7)
 random.seed(args.seed)
 
 if args.cuda:
-	print("gpu")
-	torch.cuda.manual_seed(args.seed)
+    print("gpu")
+    torch.cuda.manual_seed(args.seed)
 else:
-	print("cpu")
+    print("cpu")
 
 def make_checkpoint_dir(log):
-	print("PARAMETER" + "-"*10)
-	now = datetime.datetime.now()
-	S = '{:02d}{:02d}{:02d}{:02d}'.format(now.month, now.day, now.hour, now.minute)
-	checkpoint_dir = "../log/"+args.model_name+"/"+args.checkpoint_dir
-	args.checkpoint_dir = checkpoint_dir
-	save_dir = os.path.join(args.checkpoint_dir, S)
+    print("PARAMETER" + "-"*10)
+    now = datetime.datetime.now()
+    S = '{:02d}{:02d}{:02d}{:02d}'.format(now.month, now.day, now.hour, now.minute)
+    checkpoint_dir = "../log/"+args.model_name+"/"+args.checkpoint_dir
+    args.checkpoint_dir = checkpoint_dir
+    save_dir = os.path.join(args.checkpoint_dir, S)
 
-	if not os.path.exists("../log"):
-		os.mkdir("../log")
-	
-	if not os.path.exists("../log/"+args.model_name):
-		os.mkdir("../log/"+args.model_name)
+    if not os.path.exists("../log"):
+        os.mkdir("../log")
+    
+    if not os.path.exists("../log/"+args.model_name):
+        os.mkdir("../log/"+args.model_name)
 
-	if not os.path.exists(args.checkpoint_dir):
-		os.mkdir(args.checkpoint_dir)
+    if not os.path.exists(args.checkpoint_dir):
+        os.mkdir(args.checkpoint_dir)
 
-	if not os.path.exists(save_dir):
-		os.mkdir(save_dir)
+    if not os.path.exists(save_dir):
+        os.mkdir(save_dir)
 
-	args.checkpoint_dir = save_dir
-	
-	with open(os.path.join(args.checkpoint_dir, 'parameter.txt'), 'w') as f:
-		for attr, value in sorted(args.__dict__.items()):
-			msg = "{}={}".format(attr.upper(), value)
-			log.addOutput2IO(msg)
-			f.write("{}={}\n".format(attr.upper(), value))
+    args.checkpoint_dir = save_dir
+    
+    with open(os.path.join(args.checkpoint_dir, 'parameter.txt'), 'w') as f:
+        for attr, value in sorted(args.__dict__.items()):
+            msg = "{}={}".format(attr.upper(), value)
+            log.addOutput2IO(msg)
+            f.write("{}={}\n".format(attr.upper(), value))
 
-	msg = "---------" + "-"*10
-	log.addOutput2IO(msg)
+    msg = "---------" + "-"*10
+    log.addOutput2IO(msg)
 
-def init_model(model):
-	if args.sigma is not None:
-		for p in model.parameters():
-			if args.sigma != -1 and args.sigma != -2:
-				sigma = args.sigma
-				p.data.uniform_(-sigma, sigma)
-			elif len(list(p.size())) > 1:
-				sigma = np.sqrt(6.0 / (p.size(0) + p.size(1)))
-				if args.sigma == -1:
-					p.data.uniform_(-sigma, sigma)
-				else:
-					p.data.uniform_(0, sigma)
+def load_args(model_path):
+    model_file = os.path.join(model_path, "model_best.pt")
+    print("args file load", model_file)
+    check_point = torch.load(model_file)
+    args = check_point['args']
+
+def load_model(network, model_path):
+    print("reload model")
+    model_file = os.path.join(model_path, "model_best.pt")
+    print("model file", model_file)
+    check_point = torch.load(model_file)
+
+    network.load_state_dict(check_point['model'])
 
 def count_parameters(model):
-	parameter_num = sum(p.numel() for p in model.parameters() if p.requires_grad)
-	print("parameter_num", parameter_num) 
+    parameter_num = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print("parameter_num", parameter_num) 
 
 def main():
+    
+    model_path = args.checkpoint_dir
+    load_args(model_path)
 
-	hidden_size = args.hidden_size
-	num_layers = args.num_layers
-	batch_size = args.batch_size
-	dropout_input = args.dropout_input
-	dropout_hidden = args.dropout_hidden
-	embedding_dim = args.embedding_dim
-	final_act = args.final_act
-	loss_type = args.loss_type
-	topk = args.topk
-	optimizer_type = args.optimizer_type
-	lr = args.lr
-	weight_decay = args.weight_decay
-	momentum = args.momentum
-	eps = args.eps
-	BPTT = args.bptt
+    BPTT = args.bptt
 
-	n_epochs = args.n_epochs
-	time_sort = args.time_sort
+    device = torch.device('cuda' if args.cuda else 'cpu')
+    print("device", device)
 
-	window_size = args.window_size
-	shared_embedding = args.shared_embedding
+    if args.embedding_dim == -1:
+        raise AssertionError()
 
-	log = Logger()
-	log.addIOWriter(args)
+    data_name = args.data_name
 
-	msg = "main_time.py "
-	msg += "shared_embedding"+str(shared_embedding)
-	log.addOutput2IO(msg)
+    print("*"*10+"train load"+"*"*10)
 
-	if embedding_dim == -1:
-		msg = "embedding dim not -1 "+str(embedding_dim)
-		log.addOutput2IO(msg)
-		raise AssertionError()
+    observed_threshold = args.test_observed
 
-	data_name = args.data_name
+    data_action = args.data_folder+args.data_action
+    data_cate = args.data_folder+args.data_cate
+    data_time = args.data_folder+args.data_time
+    
+    valid_start_time = args.valid_start_time
+    test_start_time = args.test_start_time
 
-	print("*"*10)
-	print("train load")
+    st = datetime.datetime.now()
+    data_obj = MYDATA(data_action, data_cate, data_time, valid_start_time, test_start_time, observed_threshold, args.window_size)
+    et = datetime.datetime.now()
+    print("load data duration ", et-st)
 
-	observed_threshold = args.test_observed
+    train_data = data_obj.train_dataset
+    valid_data = data_obj.test_dataset
+    test_data = data_obj.test_dataset
 
-	data_action = args.data_folder+args.data_action
-	data_cate = args.data_folder+args.data_cate
-	data_time = args.data_folder+args.data_time
-	
-	valid_start_time = args.valid_start_time
-	test_start_time = args.test_start_time
+    print("+"*10+"valid load"+"+"*10)
 
-	st = datetime.datetime.now()
-	data_obj = MYDATA(data_action, data_cate, data_time, valid_start_time, test_start_time, observed_threshold, window_size)
-	et = datetime.datetime.now()
-	print("load data duration ", et-st)
+    input_size = data_obj.items()
+    output_size = input_size
 
-	train_data = data_obj.train_dataset
-	valid_data = data_obj.test_dataset
-	test_data = data_obj.test_dataset
+    negative_num = args.negative_num
 
-	print("+"*10)
-	print("valid load")
+    train_data_loader = MYDATALOADER(train_data, args.batch_size)
+    valid_data_loader = MYDATALOADER(valid_data, args.batch_size)
+    test_data_loader = MYDATALOADER(valid_data, args.batch_size)
 
-	input_size = data_obj.items()
-	output_size = input_size
+    ss = SampledSoftmax(output_size, negative_num, args.embedding_dim, None)
 
-	message = "input_size "+str(input_size)
-	log.addOutput2IO(message)
+    network = NETWORK(input_size, ss, args, device)
+    load_model(network, model_path)
 
-	negative_num = args.negative_num
+    ### eval
+    loss_function = LossFunction(device, loss_type=args.loss_type)
 
-	message = "negative_num "+str(negative_num)
-	log.addOutput2IO(message)
+    topk = args.topk
+    eval = Evaluation(None, network, loss_function, device, topk, args.warm_start)
 
-	train_data_loader = MYDATALOADER(train_data, batch_size)
-	valid_data_loader = MYDATALOADER(valid_data, batch_size)
-	test_data_loader = MYDATALOADER(valid_data, batch_size)
-	
+    # train_item_freq_dict = dict(collections.Counter(train_data.m_y_action))
+    # print(len(train_item_freq_dict))
+    # itemfreq_list = list(train_item_freq_dict.values())
+    # print(len(itemfreq_list))
+    # for item in train_item_freq_dict:
+    # 	train_item_freq_dict[item] = train_item_freq_dict[item]/len(train_data.m_y_action)
 
-    network = GRU4REC(log, None, input_size, hidden_size, output_size,
-                        final_act=final_act,
-                        num_layers=num_layers,
-                        use_cuda=args.cuda,
-                        dropout_input=dropout_input,
-                        dropout_hidden=dropout_hidden,
-                        embedding_dim=embedding_dim,
-                        shared_embedding=shared_embedding
-                        )
+    # train_itemfreq_file = "train_item_freq.txt"
+    # f = open(train_itemfreq_file, "w")
+    # for itemfreq in itemfreq_list:
+    #     f.write(str(itemfreq))
+    #     f.write("\n")
+    # f.close()
+    
+    train_item_freq_dict, train_itemid_bucketid_dict, train_bucketid_itemidlist_dict = eval.set_bucket4item(train_data)
 
-		# init weight
-		# See Balazs Hihasi(ICLR 2016), pg.7
-		
-		count_parameters(network)
+    # exit()
+    print("--"*10+"eval train"+"--"*10)
+    mean_loss, mean_recall, mean_mrr = eval.eval(train_data_loader, "train")
+    msg = "train loss: {:.4f}, recall: {:.4f}, mrr: {:.4f}".format(mean_loss, mean_recall, mean_mrr)
+    print(msg)
 
-		init_model(network)
+    eval.bias_eval(train_data_loader, train_itemid_bucketid_dict, "train")
 
-		optimizer = Optimizer(network.parameters(),
-								  optimizer_type=optimizer_type,
-								  lr=lr,
-								  weight_decay=weight_decay,
-								  momentum=momentum,
-								  eps=eps)
+    print("--"*10+"eval test"+"--"*10)
+    mean_loss, mean_recall, mean_mrr = eval.eval(test_data_loader, "test")
+    msg = "eval loss: {:.4f}, recall: {:.4f}, mrr: {:.4f}".format(mean_loss, mean_recall, mean_mrr)
+    print(msg)
 
-		
-		# c_weight_map = dict(collections.Counter(train_data.m_y_action))
-		# c_weights = [0 for i in range(output_size)]
-		# for c_i in range(1, output_size):
-		# 	c_weights[c_i] = len(train_data.m_y_action)/c_weight_map[c_i]
+    # test_item_freq_dict = dict(collections.Counter(test_data.m_y_action))
+    # print(len(test_item_freq_dict))
+    # itemfreq_list = list(test_item_freq_dict.values())
+    # print(len(itemfreq_list))
+    # for item in test_item_freq_dict:
+    # 	test_item_freq_dict[item] = test_item_freq_dict[item]/len(test_data.m_y_action)
 
-		c_weights = None
-		# print("c weights", c_weights)
-		loss_function = LossFunction(loss_type=loss_type, use_cuda=args.cuda)
-
-		trainer = Trainer(log, network,
-							  train_data=train_data_loader,
-							  eval_data=test_data_loader,
-							  optim=optimizer,
-							  use_cuda=args.cuda,
-							  loss_func=loss_function,
-							  topk = args.topk,
-							  input_size = input_size,
-							  sample_full_flag = "sample",
-							  args=args)
-
-		trainer.train(0, n_epochs - 1, batch_size)
-
+    eval.bias_eval(test_data_loader, train_itemid_bucketid_dict, "test")
+    
 
 if __name__ == '__main__':
-	main()
+    main()

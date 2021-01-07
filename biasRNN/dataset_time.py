@@ -32,6 +32,7 @@ class MYDATA(object):
 		self.m_x_short_actionNum_list_train = []
 		
 		self.m_y_action_train = []
+		self.m_t_y_train = []
 
 		self.m_y_action_idx_train = []
 
@@ -40,6 +41,7 @@ class MYDATA(object):
 		self.m_x_short_actionNum_list_test = []
 
 		self.m_y_action_test = []
+		self.m_t_y_test = []
 		
 		self.m_y_action_idx_test = []
 
@@ -75,11 +77,11 @@ class MYDATA(object):
 					continue
 
 				if time_cur <= valid_start_time:
-					self.addItem2train(action_index, window_size, action_seq_arr)
+					self.addItem2train(action_index, window_size, action_seq_arr, time_seq_arr)
 
 				if time_cur > valid_start_time:
 					if time_cur <= test_start_time:
-						self.addItem2test(action_index, window_size, action_seq_arr)
+						self.addItem2test(action_index, window_size, action_seq_arr, time_seq_arr)
 
 		print("seq num for training", len(self.m_x_short_action_list_train))
 		print("seq num of actions for training", len(self.m_x_short_actionNum_list_train))
@@ -87,11 +89,11 @@ class MYDATA(object):
 		print("seq num for testing", len(self.m_x_short_action_list_test))
 		print("seq num of actions for testing", len(self.m_x_short_actionNum_list_test))
 
-		self.train_dataset = MYDATASET(self.m_x_short_action_list_train, self.m_x_short_actionNum_list_train, self.m_y_action_train, self.m_y_action_idx_train)
+		self.train_dataset = MYDATASET(self.m_x_short_action_list_train, self.m_x_short_actionNum_list_train, self.m_y_action_train, self.m_y_action_idx_train, self.m_t_y_train)
 
-		self.test_dataset = MYDATASET(self.m_x_short_action_list_test, self.m_x_short_actionNum_list_test, self.m_y_action_test, self.m_y_action_idx_test)
+		self.test_dataset = MYDATASET(self.m_x_short_action_list_test, self.m_x_short_actionNum_list_test, self.m_y_action_test, self.m_y_action_idx_test, self.m_t_y_test)
 
-	def addItem2train(self, action_index, window_size, action_seq_arr):
+	def addItem2train(self, action_index, window_size, action_seq_arr, time_seq_arr):
 		
 		short_seq = None
 		
@@ -107,9 +109,13 @@ class MYDATA(object):
 
 		y_action = action_seq_arr[action_index]
 		self.m_y_action_train.append(y_action)
+
+		t_y = time_seq_arr[action_index]
+		self.m_t_y_train.append(t_y)
+
 		self.m_y_action_idx_train.append(action_index)
 
-	def addItem2test(self, action_index, window_size, action_seq_arr):
+	def addItem2test(self, action_index, window_size, action_seq_arr, time_seq_arr):
 		short_seq = None
 
 		if action_index <= window_size:
@@ -124,6 +130,10 @@ class MYDATA(object):
 
 		y_action = action_seq_arr[action_index]
 		self.m_y_action_test.append(y_action)
+
+		t_y = time_seq_arr[action_index]
+		self.m_t_y_test.append(t_y)
+
 		self.m_y_action_idx_test.append(action_index)
 
 	def items(self):
@@ -131,21 +141,22 @@ class MYDATA(object):
 		return len(self.m_itemmap)
 
 class MYDATASET(object):
-	def __init__(self, x_short_action_list, x_short_actionNum_list, y_action, y_action_idx):
+	def __init__(self, x_short_action_list, x_short_actionNum_list, y_action, y_action_idx, t_y):
 		self.m_x_short_action_list = x_short_action_list
 		self.m_x_short_actionNum_list = x_short_actionNum_list
 
 		self.m_y_action = y_action
 		self.m_y_action_idx = y_action_idx
+		self.m_t_y = t_y
 
 class MYDATALOADER(object):
 	def __init__(self, dataset, batch_size):
 		self.m_dataset = dataset
 		self.m_batch_size = batch_size
 
-		sorted_data = sorted(zip(self.m_dataset.m_x_short_action_list, self.m_dataset.m_x_short_actionNum_list, self.m_dataset.m_y_action, self.m_dataset.m_y_action_idx), reverse=True)
+		sorted_data = sorted(zip(self.m_dataset.m_x_short_action_list, self.m_dataset.m_x_short_actionNum_list, self.m_dataset.m_y_action, self.m_dataset.m_y_action_idx, self.m_dataset.m_t_y), reverse=True)
 
-		self.m_dataset.m_x_short_action_list,self.m_dataset.m_x_short_actionNum_list , self.m_dataset.m_y_action, self.m_dataset.m_y_action_idx = zip(*sorted_data)
+		self.m_dataset.m_x_short_action_list,self.m_dataset.m_x_short_actionNum_list , self.m_dataset.m_y_action, self.m_dataset.m_y_action_idx, self.m_dataset.m_t_y = zip(*sorted_data)
 
 		input_seq_num = len(self.m_dataset.m_x_short_action_list)
 		batch_num = int(input_seq_num/batch_size)
@@ -160,7 +171,9 @@ class MYDATALOADER(object):
 
 		y_action_idx = [self.m_dataset.m_y_action_idx[i*batch_size:(i+1)*batch_size] for i in range(batch_num)]
 
-		temp = list(zip(x_short_action_list, x_short_actionNum_list, y_action, y_action_idx))
+		t_y = [self.m_dataset.m_t_y[i*batch_size:(i+1)*batch_size] for i in range(batch_num)]
+
+		temp = list(zip(x_short_action_list, x_short_actionNum_list, y_action, y_action_idx, t_y))
 
 		self.m_temp = temp
 
@@ -170,7 +183,7 @@ class MYDATALOADER(object):
 		temp = self.m_temp
 		random.shuffle(temp)
 
-		x_short_action_list, x_short_actionNum_list, y_action, y_action_idx = zip(*temp)
+		x_short_action_list, x_short_actionNum_list, y_action, y_action_idx, t_y = zip(*temp)
 
 		batch_size = self.m_batch_size
 		
@@ -183,6 +196,7 @@ class MYDATALOADER(object):
 
 			y_action_batch = y_action[batch_index]
 			y_action_idx_batch = y_action_idx[batch_index]
+			t_y_batch = t_y[batch_index]
 
 			x_short_action_batch = []
 			x_short_actionNum_batch = []
@@ -204,6 +218,7 @@ class MYDATALOADER(object):
 
 			y_action_batch = np.array(y_action_batch)
 			y_action_idx_batch = np.array(y_action_idx_batch)
+			t_y_batch = np.array(t_y_batch)
 
 			x_short_action_batch_tensor = torch.from_numpy(x_short_action_batch)
 			mask_short_action_batch_tensor = torch.from_numpy(mask_short_action_batch*1).float()
@@ -212,6 +227,8 @@ class MYDATALOADER(object):
 
 			y_action_idx_batch_tensor = torch.from_numpy(y_action_idx_batch)
 
+			t_y_batch_tensor = torch.from_numpy(t_y_batch)
+
 			pad_x_short_actionNum_batch = np.array([i-1 if i > 0 else 0 for i in x_short_actionNum_batch])
 
-			yield x_short_action_batch_tensor, mask_short_action_batch_tensor, pad_x_short_actionNum_batch, y_action_batch_tensor, y_action_idx_batch_tensor
+			yield x_short_action_batch_tensor, mask_short_action_batch_tensor, pad_x_short_actionNum_batch, y_action_batch_tensor, y_action_idx_batch_tensor, t_y_batch_tensor
