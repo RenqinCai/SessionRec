@@ -9,8 +9,8 @@ from dataset import *
 import datetime
 
 import sys
-sys.path.insert(0, '../PyTorch_GBW_LM')
-sys.path.insert(0, '../PyTorch_GBW_LM/log_uniform')
+sys.path.insert(0, '../../PyTorch_GBW_LM')
+sys.path.insert(0, '../../PyTorch_GBW_LM/log_uniform')
 
 from log_uniform import LogUniformSampler
 
