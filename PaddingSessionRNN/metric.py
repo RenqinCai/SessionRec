@@ -1,6 +1,5 @@
 import torch
 
-
 def get_recall(indices, targets, mask):
     """
     Calculates the recall score for the given predictions and targets
@@ -62,9 +61,9 @@ def evaluate(indices, targets, mask, k=20, debug=False):
         recall (float): the recall score
         mrr (float): the mrr score
     """
-
+    
     _, indices = torch.topk(indices, k, -1)
-
+    
     # print("topK", _)
     # print("predict top k", indices)
     # print("true target", targets)

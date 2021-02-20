@@ -58,7 +58,7 @@ class HierGRU4REC(nn.Module):
         next_user_hidden = user_hidden
         next_sess_hidden = sess_hidden
         
-        torch.autograd.set_detect_anomaly(True)
+        # torch.autograd.set_detect_anomaly(True)
 
         if len(mask_user) != 0:
             # print("mask user 1")

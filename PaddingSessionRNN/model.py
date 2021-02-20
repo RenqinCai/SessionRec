@@ -3,7 +3,7 @@ import torch
 import torch.nn.functional as F
 
 class GRU4REC(nn.Module):
-    def __init__(self, window_size, input_size, hidden_size, output_size, num_layers=1, final_act='tanh', dropout_hidden=.8, dropout_input=0, batch_size=50, embedding_dim=-1, use_cuda=False, shared_embedding=True):
+    def __init__(self, log, window_size, input_size, hidden_size, output_size, num_layers=1, final_act='tanh', dropout_hidden=.8, dropout_input=0, batch_size=50, embedding_dim=-1, use_cuda=False, shared_embedding=True):
         super(GRU4REC, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
@@ -16,28 +16,34 @@ class GRU4REC(nn.Module):
         self.use_cuda = use_cuda
         self.window_size = window_size
         self.device = torch.device('cuda' if use_cuda else 'cpu')
-
         
+
         self.h2o = nn.Linear(hidden_size, output_size)
             
         self.create_final_activation(final_act)
 
-#         if self.embedding_dim != -1:
         self.look_up = nn.Embedding(input_size, self.embedding_dim).to(self.device)
-        self.gru = nn.GRU(self.embedding_dim, self.hidden_size, self.num_layers, dropout=self.dropout_hidden)
-#         else:
-#             self.onehot_buffer = self.init_emb()
-#             self.embed = torch.FloatTensor(self.window_size, self.batch_size, self.output_size)
-#             self.embed = onehot_buffer.to(self.device)   
-#             self.look_up = self.onehot_encode
-#             self.gru = nn.GRU(self.input_size, self.hidden_size, self.num_layers, dropout=self.dropout_hidden)
-            
+        self.gru = nn.GRU(self.embedding_dim, self.hidden_size, self.num_layers, dropout=self.dropout_hidden, batch_first=True)
+
+        # self.m_out_weight = nn.Parameter(torch.Tensor(output_size, hidden_size)).to(self.device)
+        # self.m_out_bias = nn.Parameter(torch.Tensor(output_size)).to(self.device)
+
         if shared_embedding:
-            print("share embedding")
-            self.out_matrix = self.look_up.weight.to(self.device)
-        else:
-            print("separate embedding")
-            self.out_matrix = torch.rand(output_size, hidden_size, requires_grad=True).to(self.device)
+            msg = "share embedding"
+            self.m_log.addOutput2IO(msg)
+            # print("data")
+            # print(self.m_out_weight.data)
+            # print("look up data")
+            # print(self.look_up.weight.data)
+            # self.m_out_weight.data = self.look_up.weight.data
+            self.m_h2o.weight.data = self.look_up.weight.data
+            # print("out weight data", self.m_out_weight.data)
+            # print("bias data", self.m_h2o.bias.data)
+            # self.m_out_matrix = self.look_up.weight.to(self.device)
+        # else:
+        #     msg = "separate embedding"
+        #     self.m_log.addOutput2IO(msg)
+        #     self.out_matrix = torch.rand(output_size, hidden_size, requires_grad=True).to(self.device)
             
         self = self.to(self.device)
 
@@ -56,54 +62,27 @@ class GRU4REC(nn.Module):
             self.final_activation = nn.LeakyReLU(negative_slope=float(final_act.split('-')[1]))
 
     def forward(self, input, hidden, input_len):
-        '''
-        Args:
-            input (B,): a batch of item indices from a session-parallel mini-batch.
-            target (B,): torch.LongTensor of next item indices from a session-parallel mini-batch.
 
-        Returns:
-            logit (B,C): Variable that stores the logits for the next items in the session-parallel mini-batch
-            hidden: GRU hidden state
-        '''
-
-    
-            # if len(input.size()) == 2:
-            #     embedded = input.unsqueeze(0)
-            # print("embedding size", embedded.size())
         embedded = input
         embedded = self.look_up(embedded)
     
-        embedded = embedded.transpose(0, 1)
+        # embedded = embedded.transpose(0, 1)
 
-        # print("embedded size", embedded.size(), input_len.shape)
-        embedded_pad = torch.nn.utils.rnn.pack_padded_sequence(embedded, input_len)
-        # print("embedded_pad size", embedded_pad.size())
+        embedded_pad = torch.nn.utils.rnn.pack_padded_sequence(embedded, input_len, batch_first=True)
         output, hidden = self.gru(embedded_pad, hidden) # (sequence, B, H)
 
-        output, _ = torch.nn.utils.rnn.pad_packed_sequence(output)
-        output = output.contiguous()
-        # print("output size", output.size())
-
-        last_output = output[-1, :, :]
-        # print("lastoutput size", last_output.size())
+        last_output = hidden[-1]
 
         last_output = last_output.view(-1, last_output.size(-1))  # (B,H)
-        output = F.linear(last_output, self.out_matrix)
-#         logit = self.final_activation(output) ## (B, output_size)
-        logit = output
+        logit = self.m_h2o(last_output)
+        # logit = F.linear(last_output, self.m_out_matrix)
+        # logit = F.linear(last_output, self.m_out_weight, bias=self.m_out_bias)
+        # logit = self.final_activation(output) ## (B, output_size)
+        # logit = output
         return logit, hidden
 
 
     def onehot_encode(self, input):
-        """
-        Returns a one-hot vector corresponding to the input
-
-        Args:
-            input (B,): torch.LongTensor of item indices
-            buffer (B,output_size): buffer that stores the one-hot vector
-        Returns:
-            one_hot (B,C): torch.FloatTensor of one-hot vectors
-        """
 
         self.onehot_buffer.zero_()
 
@@ -125,5 +104,9 @@ class GRU4REC(nn.Module):
         '''
         Initialize the hidden state of the GRU
         '''
+<<<<<<< HEAD
         h0 = torch.zeros(self.num_layers, self.batch_size, self.hidden_size).to(self.device)
         return h0
+=======
+        h0 = torch.zeros(self.num_layers, self.batch_size, self.hidden_size).to(self.device)
+>>>>>>> selfattention

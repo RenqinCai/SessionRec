@@ -1,4 +1,4 @@
-"""
+"a""
 This is multi thread seq pop 
 """
 
@@ -39,9 +39,9 @@ train_user_num = len(train_total_action_list)
 print("*"*10, "seq pop", "*"*10)
 test_user_num = len(test_total_action_list)
 
-seq_action_num_threshold = 1
+seq_action_num_threshold = 5
 
-topk = 5
+topk = args.topk
 
 correct_num = 0
 total_num = 0

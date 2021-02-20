@@ -128,7 +128,8 @@ def main():
 	data_name = args.data_name
 
 	train_data = dataset.Dataset(train_data, data_name)
-	valid_data = dataset.Dataset(valid_data, data_name, itemmap=train_data.itemmap)
+	valid_data = dataset.Dataset(valid_data, data_name)
+	# valid_data = dataset.Dataset(valid_data, data_name, itemmap=train_data.itemmap)
 	test_data = dataset.Dataset(test_data, data_name)
 
 	if not args.is_eval:

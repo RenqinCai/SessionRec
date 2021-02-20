@@ -6,7 +6,7 @@ import pickle
 
 class Dataset(object):
 	def __init__(self, itemFile, data_name, sep='\t', session_key='SessionID', item_key='ItemId', time_key='timestamp', n_sample=-1, itemmap=None, itemstamp=None, time_sort=False):
-
+		item_map = {}
 		data_file = open(itemFile, "rb")
 
 		item_sess_arr = None
@@ -29,8 +29,6 @@ class Dataset(object):
 
 		sess_len_list = []
 
-		self.itemmap = itemmap
-
 		item_id_sess_arr = []
 
 		for sess_index in range(sess_num):
@@ -42,17 +40,13 @@ class Dataset(object):
 
 			for action_index in range(sess_len):
 				item = item_sess_unit_list[action_index]
-				if itemmap is None:
-					self.addItem(item, itemmap)
-
-				if item not in self.itemmap:
-					continue
-
-				item_id = self.itemmap[item]
 
 				sess_action_num += 1
 				
-				item_id_sess_arr.append(item_id)
+				item_id_sess_arr.append(item)
+
+				if item not in item_map:
+					item_map[item] = len(item_map)
 			
 			if sess_action_num != 0:
 				sess_len_list.append(sess_action_num)
@@ -61,17 +55,10 @@ class Dataset(object):
 		self.item_arr = np.array(item_id_sess_arr)
 		self.sess_num = len(sess_len_list)
 
+		self.m_itemmap = item_map
+
 		print("session num", self.sess_num)
 		print("action num", len(self.item_arr))
-
-	def addItem(self, item, itemmap=None):
-		if itemmap is None:
-			if self.itemmap is None:
-				self.itemmap = {}
-
-			if item not in self.itemmap:
-				item_id = len(self.itemmap)
-				self.itemmap[item] = item_id
 
 	def getClickOffset(self, sess_num, sess_len_list):
 
@@ -88,7 +75,7 @@ class Dataset(object):
 	@property
 	def items(self):
 		# print("first item", self.itemmap[0])
-		return self.itemmap
+		return self.m_itemmap
 		# return len(self.itemmap)
 		# return self.itemmap.ItemId.unique()
 
@@ -97,7 +84,6 @@ class DataLoader():
 
 		self.dataset = dataset
 		self.m_batch_size = batch_size
-		self.m_output_size = len(dataset.itemmap)
 	   
 		self.m_bptt = BPTT
 
